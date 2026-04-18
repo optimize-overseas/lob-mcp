@@ -36,7 +36,7 @@ printf '%s\n' \
 npm publish                      # publish to npm (unscoped — no --access flag needed)
 ```
 
-No test suite. Verification is: clean typecheck + clean build + smoke test reports 76 tools + Inspector sanity check on the affected tool group.
+No test suite. Verification is: clean typecheck + clean build + smoke test reports 74 tools + Inspector sanity check on the affected tool group.
 
 ## Architecture
 
