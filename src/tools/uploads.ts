@@ -5,6 +5,7 @@ import {
   compact,
   dateFilterSchema,
   extraParamsSchema,
+  idempotencyKeySchema,
   listParamsSchema,
   metadataSchema,
   withExtra,
@@ -64,18 +65,21 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
     name: "lob_buckslip_orders_create",
     annotations: { title: "Order buckslip inventory (BILLABLE)", readOnlyHint: false },
     description:
-      "Order printed buckslip inventory. **Billable** — Lob prints and stocks the requested quantity.",
+      "Order printed buckslip inventory. **Billable** — Lob prints and stocks the requested quantity. " +
+      "Pass `idempotency_key` to prevent duplicate orders on retry.",
     inputSchema: {
       buckslip_id: BUCKSLIP_ID,
       quantity: z.number().int().positive().describe("Number of buckslips to order."),
+      idempotency_key: idempotencyKeySchema,
       extra: extraParamsSchema,
     },
     handler: async (args) => {
-      const { buckslip_id, extra, ...rest } = args;
+      const { buckslip_id, idempotency_key, extra, ...rest } = args;
       return lob.request({
         method: "POST",
         path: `/buckslips/${buckslip_id}/orders`,
         body: withExtra(rest, extra),
+        idempotencyKey: idempotency_key,
       });
     },
   });
@@ -141,18 +145,22 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
   registerTool(server, {
     name: "lob_card_orders_create",
     annotations: { title: "Order card inventory (BILLABLE)", readOnlyHint: false },
-    description: "Order printed card inventory. **Billable**.",
+    description:
+      "Order printed card inventory. **Billable** — Lob prints and stocks the requested quantity. " +
+      "Pass `idempotency_key` to prevent duplicate orders on retry.",
     inputSchema: {
       card_id: CARD_ID,
       quantity: z.number().int().positive(),
+      idempotency_key: idempotencyKeySchema,
       extra: extraParamsSchema,
     },
     handler: async (args) => {
-      const { card_id, extra, ...rest } = args;
+      const { card_id, idempotency_key, extra, ...rest } = args;
       return lob.request({
         method: "POST",
         path: `/cards/${card_id}/orders`,
         body: withExtra(rest, extra),
+        idempotencyKey: idempotency_key,
       });
     },
   });
