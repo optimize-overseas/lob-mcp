@@ -4,8 +4,8 @@
  *
  * Boots an MCP server over stdio that wraps the Lob.com API. Reads `LOB_API_KEY`
  * (and optional `LOB_API_VERSION`, `LOB_BASE_URL`) from the environment, prints a
- * one-line startup banner to stderr indicating test/live mode, registers all 76
- * tools, then connects the stdio transport.
+ * one-line startup banner to stderr indicating test/live mode, registers every
+ * Lob API tool, then connects the stdio transport.
  *
  * stderr is the only legal place to log here — stdout is reserved for the
  * JSON-RPC framed messages the MCP transport reads from the child process.
@@ -37,7 +37,7 @@ async function main(): Promise<void> {
       instructions:
         "MCP server for the Lob.com API. Provides tools to verify addresses and create physical mail " +
         "(postcards, letters, self-mailers, checks), manage templates, address book, campaigns, bank " +
-        "accounts, tracking, and webhooks.\n\n" +
+        "accounts, and webhooks.\n\n" +
         "SAFETY:\n" +
         "• Mail-piece create tools (`lob_postcards_create`, `lob_letters_create`, `lob_self_mailers_create`, " +
         "`lob_checks_create`, `lob_*_orders_create`) are BILLABLE — they produce real physical mail and " +
