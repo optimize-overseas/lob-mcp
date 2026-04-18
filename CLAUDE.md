@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`lob-mcp` is an MCP (Model Context Protocol) server that wraps the [Lob.com](https://lob.com) API, exposing **74 tools across 11 resource groups** — address verification (US + international, bulk, autocomplete, identity validation), address book CRUD, mail-piece creation and lifecycle (postcards, letters, self-mailers, checks), templates + template versions, campaigns + creatives, buckslips/cards + print orders, informed-delivery campaigns, QR-code analytics, resource proofs, bank accounts (with micro-deposit verification), and webhook subscriptions.
+`lob-mcp` is an MCP (Model Context Protocol) server that wraps the [Lob.com](https://lob.com) API, exposing **73 tools across 11 resource groups** — address verification (US + international, bulk, autocomplete, identity validation), address book CRUD, mail-piece creation and lifecycle (postcards, letters, self-mailers, checks), templates + template versions, campaigns + creatives, buckslips/cards + print orders, informed-delivery campaigns, QR-code analytics, resource proofs, bank accounts (with micro-deposit verification), and webhook subscriptions.
 
 Distributed on npm as [`lob-mcp`](https://www.npmjs.com/package/lob-mcp); runs as a local stdio server via `npx lob-mcp`.
 
@@ -36,7 +36,7 @@ printf '%s\n' \
 npm publish                      # publish to npm (unscoped — no --access flag needed)
 ```
 
-No test suite. Verification is: clean typecheck + clean build + smoke test reports 74 tools + Inspector sanity check on the affected tool group.
+No test suite. Verification is: clean typecheck + clean build + smoke test reports 73 tools + Inspector sanity check on the affected tool group.
 
 ## Architecture
 
