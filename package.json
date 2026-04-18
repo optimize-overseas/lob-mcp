@@ -1,7 +1,7 @@
 {
   "name": "lob-mcp",
-  "version": "0.1.0",
-  "description": "MCP server for the Lob.com API - 76 tools for address verification, postcards, letters, self-mailers, checks, templates, campaigns, tracking, and webhooks.",
+  "version": "0.1.1",
+  "description": "MCP server for the Lob.com API - 74 tools for address verification, postcards, letters, self-mailers, checks, templates, campaigns, and webhooks.",
   "type": "module",
   "bin": {
     "lob-mcp": "build/index.js"

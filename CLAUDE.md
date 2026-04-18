@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`lob-mcp` is an MCP (Model Context Protocol) server that wraps the [Lob.com](https://lob.com) API, exposing **76 tools across 12 resource groups** — address verification (US + international, bulk, autocomplete, reverse geocode, identity validation), address book CRUD, mail-piece creation and lifecycle (postcards, letters, self-mailers, checks), templates + template versions, campaigns + creatives, buckslips/cards + print orders, informed-delivery campaigns, QR-code analytics, resource proofs, bank accounts (with micro-deposit verification), USPS tracking events, and webhook subscriptions.
+`lob-mcp` is an MCP (Model Context Protocol) server that wraps the [Lob.com](https://lob.com) API, exposing **74 tools across 11 resource groups** — address verification (US + international, bulk, autocomplete, identity validation), address book CRUD, mail-piece creation and lifecycle (postcards, letters, self-mailers, checks), templates + template versions, campaigns + creatives, buckslips/cards + print orders, informed-delivery campaigns, QR-code analytics, resource proofs, bank accounts (with micro-deposit verification), and webhook subscriptions.
 
 Distributed on npm as [`lob-mcp`](https://www.npmjs.com/package/lob-mcp); runs as a local stdio server via `npx lob-mcp`.
 
@@ -25,7 +25,7 @@ npm run build                    # tsc + chmod on the stdio entry
 npm run inspector                # MCP Inspector for interactive smoke testing
 npm start                        # run the server directly (needs LOB_API_KEY)
 
-# stdio smoke test — init + list tools (should return 76)
+# stdio smoke test — init + list tools (should return 74)
 printf '%s\n' \
   '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1.0"}}}' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
@@ -57,7 +57,7 @@ src/
 └── tools/
     ├── helpers.ts               # registerTool() — wraps handlers with consistent JSON formatting and error → isError:true mapping
     ├── register.ts              # single wire-up function that registers all 12 groups
-    └── <group>.ts               # one file per resource group (address-book, verifications, postcards, letters, self-mailers, checks, templates, campaigns, uploads, bank-accounts, tracking, webhooks)
+    └── <group>.ts               # one file per resource group (address-book, verifications, postcards, letters, self-mailers, checks, templates, campaigns, uploads, bank-accounts, webhooks)
 ```
 
 ### Patterns that matter when editing
