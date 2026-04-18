@@ -34,7 +34,7 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
       name: z.string().describe("Display name for the campaign."),
       description: z.string().max(500).optional(),
       schedule_type: z
-        .enum(["immediate", "scheduled"])
+        .enum(["immediate", "scheduled_send_date"])
         .optional()
         .describe("Whether the campaign should send immediately or on a schedule."),
       send_date: z
@@ -150,15 +150,6 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
         body: withExtra(rest, extra),
       });
     },
-  });
-
-  registerTool(server, {
-    name: "lob_creatives_list",
-    annotations: { title: "List creatives", readOnlyHint: true, idempotentHint: true },
-    description: "List creatives on your Lob account.",
-    inputSchema: { ...listParamsSchema.shape, campaign_id: z.string().optional() },
-    handler: async (args) =>
-      lob.request({ method: "GET", path: "/creatives", query: compact(args) }),
   });
 
   registerTool(server, {

@@ -6,7 +6,7 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) server for the [Lob
 
 ## Features
 
-- **74 tools** across **11 resource groups** covering the Lob v1 API surface:
+- **73 tools** across **11 resource groups** covering the Lob v1 API surface:
   - Address book (CRUD)
   - US + international address verification (single, bulk, autocomplete, identity validation)
   - Postcards, letters, self-mailers, checks (create, list, retrieve, cancel)

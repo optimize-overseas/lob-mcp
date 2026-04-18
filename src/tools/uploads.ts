@@ -197,17 +197,25 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
       "morning email digest of upcoming mail.",
     inputSchema: {
       campaign_id: z.string().describe("Parent Lob campaign ID this Informed Delivery extends."),
-      representative_image_url: z
-        .string()
-        .url()
-        .describe("Image shown next to the mail-piece preview."),
-      ride_along_image_url: z.string().url().describe("The creative image shown alongside the mail-piece preview."),
+      representative_image: z
+        .record(z.unknown())
+        .default({})
+        .describe("Image-metadata object (Lob's API shape). Often an empty `{}` is sufficient; the effective URL goes in `representative_url`."),
+      ride_along_image: z
+        .record(z.unknown())
+        .default({})
+        .describe("Image-metadata object (Lob's API shape). Often an empty `{}` is sufficient; the effective URL goes in `ride_along_url`."),
+      representative_url: z.string().url().describe("Public URL of the preview image shown next to the mail-piece."),
+      ride_along_url: z.string().url().describe("Public URL of the interactive creative shown alongside the preview."),
       target_url: z.string().url().describe("URL the recipient is sent to when they click."),
       quantity: z
         .number()
         .int()
         .positive()
         .describe("Number of pieces in the Informed Delivery campaign."),
+      start_date: z
+        .string()
+        .describe("ISO-format date for the campaign start; Lob enforces a forward-facing window (roughly today → +2 months)."),
       description: z.string().max(255).optional(),
       extra: extraParamsSchema,
     },
