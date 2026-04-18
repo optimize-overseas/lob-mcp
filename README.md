@@ -34,13 +34,13 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) server for the [Lob
 ### Run via npx (no install)
 
 ```bash
-npx lob-mcp
+npx @optimizeoverseas/lob-mcp
 ```
 
 ### Install globally
 
 ```bash
-npm install -g lob-mcp
+npm install -g @optimizeoverseas/lob-mcp
 lob-mcp
 ```
 
@@ -73,7 +73,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "lob": {
       "command": "npx",
-      "args": ["-y", "lob-mcp"],
+      "args": ["-y", "@optimizeoverseas/lob-mcp"],
       "env": {
         "LOB_API_KEY": "test_your_key_here"
       }
@@ -87,7 +87,7 @@ Restart Claude Desktop. The Lob tools should appear in the tool picker.
 ## Use with Claude Code
 
 ```bash
-claude mcp add lob --env LOB_API_KEY=test_your_key_here -- npx -y lob-mcp
+claude mcp add lob --env LOB_API_KEY=test_your_key_here -- npx -y @optimizeoverseas/lob-mcp
 ```
 
 ## Use with the MCP Inspector

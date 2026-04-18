@@ -1,16 +1,13 @@
 {
-  "name": "lob-mcp",
+  "name": "@optimizeoverseas/lob-mcp",
   "version": "0.1.0",
-  "description": "Model Context Protocol server for the Lob.com API. Lets LLMs verify addresses and send physical mail (postcards, letters, self-mailers, checks) through Lob.",
+  "description": "MCP server for the Lob.com API - 76 tools for address verification, postcards, letters, self-mailers, checks, templates, campaigns, tracking, and webhooks.",
   "type": "module",
-  "license": "MIT",
   "bin": {
-    "lob-mcp": "./build/index.js"
+    "lob-mcp": "build/index.js"
   },
   "files": [
-    "build",
-    "README.md",
-    "LICENSE"
+    "build"
   ],
   "scripts": {
     "build": "tsc && chmod 755 build/index.js",
@@ -19,8 +16,13 @@
     "inspector": "npx @modelcontextprotocol/inspector build/index.js",
     "start": "node build/index.js"
   },
-  "engines": {
-    "node": ">=18"
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.22.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.3"
   },
   "keywords": [
     "mcp",
@@ -34,22 +36,20 @@
     "checks",
     "self-mailers",
     "claude",
-    "ai-tools"
+    "ai",
+    "anthropic"
   ],
+  "author": "Optimize Overseas",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/optimize-overseas/lob-mcp.git"
+    "url": "git+https://github.com/optimize-overseas/lob-mcp.git"
   },
+  "homepage": "https://github.com/optimize-overseas/lob-mcp#readme",
   "bugs": {
     "url": "https://github.com/optimize-overseas/lob-mcp/issues"
   },
-  "homepage": "https://github.com/optimize-overseas/lob-mcp#readme",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.22.0",
-    "zod": "^3.25.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.10.0",
-    "typescript": "^5.6.3"
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
