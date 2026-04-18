@@ -10,5 +10,5 @@ coverage/
 
 # Local development context — not for public consumption
 .claude/
-CLAUDE.md
+CLAUDE.local.md
 bestpractices/
