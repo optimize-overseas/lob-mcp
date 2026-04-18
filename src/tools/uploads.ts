@@ -30,11 +30,13 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
     name: "lob_buckslips_create",
     annotations: { title: "Create a buckslip", readOnlyHint: false },
     description:
-      "Upload a buckslip — a 8.75x3.75 inch promotional insert that can be inserted into letters. " +
-      "Inventory is reserved on Lob's side and consumed when ordered.",
+      "Upload a buckslip — an 8.75\"×3.75\" promotional insert that can be included in letters. " +
+      "`front` must be a publicly-reachable PDF URL (or base64 data URI). Inventory is reserved on " +
+      "Lob's side and consumed when ordered. Note: unlike other Lob endpoints, Lob's buckslips API " +
+      "only accepts multipart/form-data, so this tool sends the body as multipart.",
     inputSchema: {
-      front: z.string().describe("Front content source (HTML/URL/PDF)."),
-      back: z.string().describe("Back content source."),
+      front: z.string().describe("Front content source — PDF URL (required)."),
+      back: z.string().optional().describe("Back content source — PDF URL."),
       description: z.string().max(255).optional(),
       size: z.string().optional().describe("Buckslip size, e.g. '8.75x3.75'."),
       metadata: metadataSchema,
@@ -46,6 +48,7 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
         method: "POST",
         path: "/buckslips",
         body: withExtra(rest, extra),
+        asForm: true,
       });
     },
   });
@@ -75,7 +78,7 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
       "Pass `idempotency_key` to prevent duplicate orders on retry.",
     inputSchema: {
       buckslip_id: BUCKSLIP_ID,
-      quantity: z.number().int().positive().describe("Number of buckslips to order."),
+      quantity_ordered: z.number().int().positive().describe("Number of buckslips to order."),
       idempotency_key: idempotencyKeySchema,
       extra: extraParamsSchema,
     },
@@ -156,7 +159,7 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
       "Pass `idempotency_key` to prevent duplicate orders on retry.",
     inputSchema: {
       card_id: CARD_ID,
-      quantity: z.number().int().positive(),
+      quantity: z.number().int().positive().describe("Number of cards to order. (Note: buckslip orders use `quantity_ordered`; Lob's API differs per resource.)"),
       idempotency_key: idempotencyKeySchema,
       extra: extraParamsSchema,
     },
