@@ -1,5 +1,5 @@
 {
-  "name": "@optimizeoverseas/lob-mcp",
+  "name": "lob-mcp",
   "version": "0.1.0",
   "description": "MCP server for the Lob.com API - 76 tools for address verification, postcards, letters, self-mailers, checks, templates, campaigns, tracking, and webhooks.",
   "type": "module",
