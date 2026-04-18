@@ -29,7 +29,10 @@ export function registerCheckTools(server: McpServer, lob: LobClient): void {
     description:
       "Create and mail a printed check drawn against a verified bank account. **HIGH IMPACT**: " +
       "this both costs Lob fees AND draws the check `amount` from the linked bank account when cashed. " +
-      "Always pass `idempotency_key` (e.g. a UUID). Requires a verified bank account ID (`bank_…`).",
+      "Always pass `idempotency_key` (e.g. a UUID). Requires a verified bank account ID (`bank_…`). " +
+      "For the bottom of the check page, Lob requires exactly one of `message` (plain text, max 400 chars) " +
+      "or `check_bottom` (custom template / HTML / PDF, typically paired with `merge_variables` for " +
+      "templated remittance or stub designs).",
     inputSchema: {
       ...mailPieceCommonShape,
       bank_account: z.string().regex(/^bank_/).describe("Verified Lob bank account ID."),
@@ -44,10 +47,26 @@ export function registerCheckTools(server: McpServer, lob: LobClient): void {
         .string()
         .max(400)
         .optional()
-        .describe("Letter accompanying the check (max 400 chars). Mutually exclusive with `logo`/`attachment`."),
-      logo: contentSourceSchema.optional().describe("Logo to print on the check."),
+        .describe(
+          "Plain-text message printed on the bottom of the check page (max 400 chars). " +
+            "Mutually exclusive with `check_bottom` — Lob requires exactly one of the two. " +
+            "Use `message` for a simple text note; use `check_bottom` for full custom artwork.",
+        ),
+      check_bottom: contentSourceSchema.optional().describe(
+        "Custom artwork for the bottom half of the check page (below the payment voucher). " +
+          "Accepts the same content-source forms as `file`/`front`/`back`: a Lob template ID (`tmpl_…`), " +
+          "an HTML string, an https:// URL, or a base64 PDF. Mutually exclusive with `message` — " +
+          "Lob requires exactly one of the two. Prints in black & white; 8.5\"x11\" artwork must conform " +
+          "to Lob's check-bottom template. Pairs naturally with `merge_variables` for templated stubs — " +
+          "pass a `tmpl_…` ID plus a map of per-recipient merge fields (e.g. payee name, amount, " +
+          "reference numbers) to personalize every check.",
+      ),
+      logo: contentSourceSchema
+        .optional()
+        .describe("Logo printed on the check face (upper-left, grayscale; PNG or JPG)."),
       attachment: contentSourceSchema.optional().describe(
-        "PDF/HTML attachment to include with the check (e.g. an invoice or remittance advice).",
+        "Secondary document included in the envelope after the check page (e.g. an invoice or remittance advice). " +
+          "Accepts a template ID, HTML, URL, or base64 PDF. PDFs are capped at 6 pages; printed double-sided B&W.",
       ),
       idempotency_key: idempotencyKeySchema,
       extra: extraParamsSchema,
