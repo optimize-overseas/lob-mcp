@@ -1,3 +1,10 @@
+/**
+ * Upload-style and ancillary resources: buckslips, cards, their print orders,
+ * informed-delivery campaigns, QR-code analytics, and resource proofs.
+ *
+ * Buckslip and card *uploads* register inventory with Lob (not billable). The
+ * paired *_orders_create tools that print physical inventory ARE billable.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

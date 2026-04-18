@@ -1,3 +1,9 @@
+/**
+ * USPS tracking event lookup. Read-only; no side effects.
+ *
+ * For real-time delivery, prefer `lob_webhooks_create` to subscribe instead of
+ * polling this endpoint.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

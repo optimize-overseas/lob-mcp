@@ -1,3 +1,11 @@
+/**
+ * Environment loading and Lob test/live mode detection.
+ *
+ * The mode is inferred from the API key prefix (`test_` vs `live_`) and surfaced
+ * to the user at startup so an LLM client knows whether tool calls will produce
+ * real, billable physical mail.
+ */
+
 export interface LobEnv {
   apiKey: string;
   apiVersion: string | undefined;

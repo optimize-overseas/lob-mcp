@@ -1,4 +1,15 @@
 #!/usr/bin/env node
+/**
+ * lob-mcp entry point.
+ *
+ * Boots an MCP server over stdio that wraps the Lob.com API. Reads `LOB_API_KEY`
+ * (and optional `LOB_API_VERSION`, `LOB_BASE_URL`) from the environment, prints a
+ * one-line startup banner to stderr indicating test/live mode, registers all 76
+ * tools, then connects the stdio transport.
+ *
+ * stderr is the only legal place to log here — stdout is reserved for the
+ * JSON-RPC framed messages the MCP transport reads from the child process.
+ */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { loadEnv } from "./env.js";

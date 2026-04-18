@@ -1,3 +1,9 @@
+/**
+ * Bank account tools — register, list, retrieve, delete, and verify accounts that
+ * back `lob_checks_create`. Verification uses a two-amount micro-deposit flow
+ * Lob initiates at registration time; a check cannot be drawn against an account
+ * until verification succeeds.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

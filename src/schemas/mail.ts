@@ -1,3 +1,9 @@
+/**
+ * Schemas shared by mail-piece create endpoints (postcards, letters, self-mailers,
+ * checks). Encapsulates the common create-shape — to/from addresses, content
+ * sources, mail class, scheduling, metadata — so each resource file only has to
+ * declare its resource-specific fields on top.
+ */
 import { z } from "zod";
 import { addressRefSchema, mailTypeSchema, mergeVariablesSchema, sendDateSchema } from "./common.js";
 

@@ -1,3 +1,9 @@
+/**
+ * Self-mailer tools — create / list / get / cancel. A self-mailer is a folded,
+ * tabbed mail piece (no envelope) used for promotional and transactional sends.
+ *
+ * `lob_self_mailers_create` is BILLABLE.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

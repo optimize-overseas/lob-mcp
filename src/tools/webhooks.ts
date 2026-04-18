@@ -1,3 +1,8 @@
+/**
+ * Webhook subscription tools. Subscribe an HTTPS endpoint to Lob events
+ * (postcard.mailed, letter.delivered, check.in_transit, …) so an external
+ * system can react in near-real-time without polling.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

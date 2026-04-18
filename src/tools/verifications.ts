@@ -1,3 +1,8 @@
+/**
+ * Address verification tools: US single + bulk, international single + bulk,
+ * autocomplete, reverse geocode, identity validation. None of these produce
+ * physical mail — they are pure lookups against Lob's verification corpus.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

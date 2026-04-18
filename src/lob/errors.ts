@@ -1,3 +1,11 @@
+/**
+ * Structured Lob API error type and a tool-friendly formatter.
+ *
+ * `formatErrorForTool` is the single chokepoint for surfacing failures back through
+ * the MCP transport. It includes status, optional Lob error code, message, and
+ * Lob's `x-request-id` (invaluable when filing a Lob support ticket), but it
+ * deliberately does NOT include the request body — that may contain PII.
+ */
 import { safeStringify } from "./redact.js";
 
 export interface LobErrorBody {

@@ -1,3 +1,9 @@
+/**
+ * Address-book tools — CRUD over saved addresses (`adr_…`).
+ *
+ * Saved addresses are NOT auto-verified; callers should run a verification tool
+ * separately if deliverability matters.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

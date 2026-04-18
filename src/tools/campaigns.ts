@@ -1,3 +1,11 @@
+/**
+ * Campaign and creative tools.
+ *
+ * A campaign is the container (audience + schedule); a creative is the artwork
+ * the campaign sends (postcard / letter / self-mailer). Creating either of these
+ * is NOT billable on its own — billing happens when the campaign actually sends
+ * mail pieces, which is triggered separately.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

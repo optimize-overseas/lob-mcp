@@ -1,3 +1,9 @@
+/**
+ * Template tools — reusable HTML for mail pieces, plus per-template versions.
+ *
+ * Creating a new template version does NOT publish it; callers must explicitly
+ * set `published_version` via `lob_templates_update` to roll the change forward.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

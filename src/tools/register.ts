@@ -1,3 +1,9 @@
+/**
+ * Single entry point that wires every resource group's tools into the MCP server.
+ *
+ * Order matters only insofar as it controls the order tools appear in `tools/list`
+ * responses; the groups are otherwise independent.
+ */
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";
 import { registerAddressBookTools } from "./address-book.js";

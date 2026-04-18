@@ -1,3 +1,11 @@
+/**
+ * Check tools — create / list / get / cancel. Checks are printed and mailed
+ * physically and draw funds from a verified Lob bank account when cashed.
+ *
+ * `lob_checks_create` is the highest-impact tool in this server: it both incurs
+ * Lob fees AND moves real money. Hosts should treat its destructive/billable
+ * hints accordingly.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

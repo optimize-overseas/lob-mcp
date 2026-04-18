@@ -1,3 +1,10 @@
+/**
+ * Letter tools — create / list / get / cancel. Letters mail in #10 double-window
+ * envelopes and support inserts (cards, buckslips), return envelopes, perforation,
+ * and USPS extra services (certified, registered).
+ *
+ * `lob_letters_create` is BILLABLE.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

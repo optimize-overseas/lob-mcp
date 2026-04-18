@@ -1,3 +1,12 @@
+/**
+ * Zod schemas shared across multiple resource groups: address payloads, list/
+ * pagination params, idempotency, metadata, and the generic `extra` escape hatch
+ * that lets callers pass any Lob field not enumerated in a tool schema.
+ *
+ * Also exports two payload-shaping helpers — `compact` (drop undefined keys) and
+ * `withExtra` (merge user-provided extras under typed fields, with typed fields
+ * taking precedence so the schema can't be silently overridden).
+ */
 import { z } from "zod";
 
 /**

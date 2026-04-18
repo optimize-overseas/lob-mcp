@@ -1,3 +1,9 @@
+/**
+ * Postcard tools — create / list / get / cancel.
+ *
+ * `lob_postcards_create` is BILLABLE: each call queues a real piece of physical
+ * mail and is charged to the Lob account. Always pass `idempotency_key`.
+ */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";

@@ -1,3 +1,14 @@
+/**
+ * Thin fetch-based HTTP client for the Lob.com REST API.
+ *
+ * Intentionally does NOT depend on `@lob/lob-typescript-sdk` — we want full control
+ * over headers (Idempotency-Key, Lob-Version, User-Agent), nested-bracket query
+ * encoding (`metadata[batch_id]=…`), and PII handling. The cost is keeping the
+ * surface small and routing all requests through the single `request()` method.
+ *
+ * Auth is HTTP Basic with the API key as the username and an empty password,
+ * per Lob's documentation. There is no OAuth.
+ */
 import { loadEnv, type LobEnv } from "../env.js";
 import { USER_AGENT } from "../version.js";
 import { LobApiError, type LobErrorBody } from "./errors.js";
