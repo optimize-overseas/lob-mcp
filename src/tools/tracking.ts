@@ -10,7 +10,8 @@ export function registerTrackingTools(server: McpServer, lob: LobClient): void {
     annotations: { title: "List tracking events", readOnlyHint: true, idempotentHint: true },
     description:
       "List USPS tracking events (e.g. 'Mailed', 'In Transit', 'Delivered', 'Re-Routed', 'Returned to Sender') " +
-      "for mail pieces on your account. Filter by mail piece ID or date range.",
+      "for mail pieces on your account. Filter by mail piece ID or date range. " +
+      "For real-time delivery, subscribe to a webhook via `lob_webhooks_create` instead of polling.",
     inputSchema: {
       ...listParamsSchema.shape,
       resource_id: z

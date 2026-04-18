@@ -13,9 +13,9 @@ export const inlineAddressSchema = z
     address_city: z.string().max(200).optional(),
     address_state: z
       .string()
-      .max(2)
+      .max(50)
       .optional()
-      .describe("Two-letter US state code, or full ISO subdivision name for international."),
+      .describe("Two-letter US state code, or full state/province/region name for international."),
     address_zip: z.string().max(40).optional().describe("ZIP/postal code."),
     address_country: z
       .string()

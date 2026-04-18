@@ -1,4 +1,5 @@
 import { loadEnv, type LobEnv } from "../env.js";
+import { USER_AGENT } from "../version.js";
 import { LobApiError, type LobErrorBody } from "./errors.js";
 
 export interface RequestOptions {
@@ -28,7 +29,7 @@ export class LobClient {
     const headers: Record<string, string> = {
       Authorization: this.authHeader,
       Accept: "application/json",
-      "User-Agent": "lob-mcp/0.1.0",
+      "User-Agent": USER_AGENT,
     };
     const version = opts.lobVersion ?? this.env.apiVersion;
     if (version) headers["Lob-Version"] = version;

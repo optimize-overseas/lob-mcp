@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { loadEnv } from "./env.js";
 import { LobClient } from "./lob/client.js";
 import { registerAllTools } from "./tools/register.js";
+import { SERVER_VERSION } from "./version.js";
 
 async function main(): Promise<void> {
   const env = loadEnv();
@@ -20,7 +21,7 @@ async function main(): Promise<void> {
   const lob = new LobClient(env);
 
   const server = new McpServer(
-    { name: "lob-mcp", version: "0.1.0" },
+    { name: "lob-mcp", version: SERVER_VERSION },
     {
       instructions:
         "MCP server for the Lob.com API. Provides tools to verify addresses and create physical mail " +
