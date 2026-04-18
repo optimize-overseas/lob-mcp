@@ -21,7 +21,6 @@ import { registerTool } from "./helpers.js";
 
 const BUCKSLIP_ID = z.string().regex(/^bck_/).describe("Buckslip ID (`bck_…`).");
 const CARD_ID = z.string().regex(/^card_/).describe("Card ID (`card_…`).");
-const ID_CAMPAIGN_ID = z.string().describe("Informed delivery campaign ID.");
 const RP_ID = z.string().describe("Resource proof ID.");
 
 export function registerUploadsTools(server: McpServer, lob: LobClient): void {
@@ -187,66 +186,6 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
     },
   });
 
-  // ── Informed delivery campaigns ───────────────────────────────────────────
-
-  registerTool(server, {
-    name: "lob_informed_delivery_campaigns_create",
-    annotations: { title: "Create an Informed Delivery campaign", readOnlyHint: false },
-    description:
-      "Create a USPS Informed Delivery campaign — interactive content shown alongside the recipient's " +
-      "morning email digest of upcoming mail.",
-    inputSchema: {
-      campaign_id: z.string().describe("Parent Lob campaign ID this Informed Delivery extends."),
-      representative_image: z
-        .record(z.unknown())
-        .default({})
-        .describe("Image-metadata object (Lob's API shape). Often an empty `{}` is sufficient; the effective URL goes in `representative_url`."),
-      ride_along_image: z
-        .record(z.unknown())
-        .default({})
-        .describe("Image-metadata object (Lob's API shape). Often an empty `{}` is sufficient; the effective URL goes in `ride_along_url`."),
-      representative_url: z.string().url().describe("Public URL of the preview image shown next to the mail-piece."),
-      ride_along_url: z.string().url().describe("Public URL of the interactive creative shown alongside the preview."),
-      target_url: z.string().url().describe("URL the recipient is sent to when they click."),
-      quantity: z
-        .number()
-        .int()
-        .positive()
-        .describe("Number of pieces in the Informed Delivery campaign."),
-      start_date: z
-        .string()
-        .describe("ISO-format date for the campaign start; Lob enforces a forward-facing window (roughly today → +2 months)."),
-      description: z.string().max(255).optional(),
-      extra: extraParamsSchema,
-    },
-    handler: async (args) => {
-      const { extra, ...rest } = args;
-      return lob.request({
-        method: "POST",
-        path: "/informed_delivery_campaigns",
-        body: withExtra(rest, extra),
-      });
-    },
-  });
-
-  registerTool(server, {
-    name: "lob_informed_delivery_campaigns_list",
-    annotations: { title: "List Informed Delivery campaigns", readOnlyHint: true, idempotentHint: true },
-    description: "List Informed Delivery campaigns on your account.",
-    inputSchema: { ...listParamsSchema.shape },
-    handler: async (args) =>
-      lob.request({ method: "GET", path: "/informed_delivery_campaigns", query: compact(args) }),
-  });
-
-  registerTool(server, {
-    name: "lob_informed_delivery_campaigns_get",
-    annotations: { title: "Retrieve an Informed Delivery campaign", readOnlyHint: true, idempotentHint: true },
-    description: "Retrieve a single Informed Delivery campaign by ID.",
-    inputSchema: { id: ID_CAMPAIGN_ID },
-    handler: async ({ id }) =>
-      lob.request({ method: "GET", path: `/informed_delivery_campaigns/${id}` }),
-  });
-
   // ── QR codes & resource proofs ────────────────────────────────────────────
 
   registerTool(server, {
@@ -271,13 +210,20 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
     name: "lob_resource_proofs_create",
     annotations: { title: "Create a resource proof", readOnlyHint: false },
     description:
-      "Create a proof — a PDF preview of how a resource (postcard, letter, etc.) will print, " +
-      "for review before committing to a mail send.",
+      "Create a proof — a PDF preview of how a resource (postcard, letter, self-mailer) will print — " +
+      "for review before committing to a mail send. Pass `resource_parameters` with the same shape you " +
+      "would pass to the underlying create endpoint (e.g. `{ front, back, to }` for a postcard).",
     inputSchema: {
-      resource_id: z.string().describe("ID of the resource to proof."),
       resource_type: z
-        .enum(["postcard", "letter", "self_mailer", "check", "buckslip", "card"])
+        .enum(["postcard", "letter", "self_mailer"])
         .describe("Type of resource being proofed."),
+      resource_parameters: z
+        .record(z.unknown())
+        .describe(
+          "Parameters matching the resource type's create shape — e.g. `{ front, back, to }` for a " +
+            "postcard, `{ file, to }` for a letter. Each field accepts an HTML string, URL, or template ID.",
+        ),
+      template_id: z.string().optional().describe("Optional template ID to associate with the proof."),
       extra: extraParamsSchema,
     },
     handler: async (args) => {
