@@ -1,0 +1,9 @@
+src/
+bestpractices/
+tsconfig.json
+.gitignore
+.env*
+.DS_Store
+*.tsbuildinfo
+.claude/
+CLAUDE.md

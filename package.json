@@ -1,0 +1,55 @@
+{
+  "name": "lob-mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for the Lob.com API. Lets LLMs verify addresses and send physical mail (postcards, letters, self-mailers, checks) through Lob.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "lob-mcp": "./build/index.js"
+  },
+  "files": [
+    "build",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && chmod 755 build/index.js",
+    "prepare": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "inspector": "npx @modelcontextprotocol/inspector build/index.js",
+    "start": "node build/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "lob",
+    "lob-api",
+    "direct-mail",
+    "address-verification",
+    "postcards",
+    "letters",
+    "checks",
+    "self-mailers",
+    "claude",
+    "ai-tools"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/optimize-overseas/lob-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/optimize-overseas/lob-mcp/issues"
+  },
+  "homepage": "https://github.com/optimize-overseas/lob-mcp#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.22.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,14 @@
+node_modules/
+build/
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+coverage/
+*.tsbuildinfo
+
+# Local development context — not for public consumption
+.claude/
+CLAUDE.md
+bestpractices/
