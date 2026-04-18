@@ -1,12 +1,12 @@
 /**
  * Address verification tools: US single + bulk, international single + bulk,
- * autocomplete, reverse geocode, identity validation. None of these produce
- * physical mail — they are pure lookups against Lob's verification corpus.
+ * autocomplete, and identity validation. None of these produce physical mail —
+ * they are pure lookups against Lob's verification corpus.
  */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";
-import { compact, extraParamsSchema, withExtra } from "../schemas/common.js";
+import { extraParamsSchema, withExtra } from "../schemas/common.js";
 import { registerTool } from "./helpers.js";
 
 const usAddressInputSchema = {
@@ -151,21 +151,6 @@ export function registerVerificationTools(server: McpServer, lob: LobClient): vo
         body: withExtra(rest, extra),
       });
     },
-  });
-
-  registerTool(server, {
-    name: "lob_reverse_geocode",
-    annotations: { title: "Reverse geocode a coordinate", readOnlyHint: true, idempotentHint: true },
-    description: "Look up the closest US ZIP+4 codes for a given latitude/longitude.",
-    inputSchema: {
-      location: z
-        .string()
-        .regex(/^-?\d+\.?\d*,-?\d+\.?\d*$/)
-        .describe("Comma-separated 'lat,lng' string, e.g. '37.7749,-122.4194'."),
-      size: z.number().int().min(1).max(50).optional().describe("Number of results (1–50)."),
-    },
-    handler: async (args) =>
-      lob.request({ method: "GET", path: "/reverse_geocode_lookups", query: compact(args) }),
   });
 
   registerTool(server, {

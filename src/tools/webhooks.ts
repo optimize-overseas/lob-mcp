@@ -15,7 +15,7 @@ import {
 } from "../schemas/common.js";
 import { registerTool } from "./helpers.js";
 
-const WH_ID = z.string().regex(/^whk_/).describe("Webhook ID (`whk_…`).");
+const WH_ID = z.string().regex(/^(whk_|ep_)/).describe("Webhook ID (`ep_…`).");
 
 export function registerWebhookTools(server: McpServer, lob: LobClient): void {
   registerTool(server, {
@@ -26,7 +26,7 @@ export function registerWebhookTools(server: McpServer, lob: LobClient): void {
       "'letter.in_transit', 'check.delivered'). The endpoint must respond with 2xx within 5 seconds.",
     inputSchema: {
       url: z.string().url().describe("HTTPS URL to receive event POSTs."),
-      enabled_events: z
+      event_types: z
         .array(z.string())
         .min(1)
         .describe("Event types to subscribe to, e.g. ['postcard.mailed', 'letter.delivered']. Use ['*'] for all."),
@@ -64,20 +64,22 @@ export function registerWebhookTools(server: McpServer, lob: LobClient): void {
   registerTool(server, {
     name: "lob_webhooks_update",
     annotations: { title: "Update a webhook", readOnlyHint: false, idempotentHint: true },
-    description: "Update a webhook's URL, enabled events, or status.",
+    description:
+      "Update a webhook's URL, event subscriptions, or description. Note: the `disabled` flag on the " +
+      "response is Lob-managed (e.g. Lob auto-disables webhooks whose delivery URL consistently fails) " +
+      "and is not settable by callers.",
     inputSchema: {
       id: WH_ID,
       url: z.string().url().optional(),
-      enabled_events: z.array(z.string()).optional(),
+      event_types: z.array(z.string()).optional(),
       description: z.string().max(255).optional(),
-      disabled: z.boolean().optional().describe("Set true to pause delivery without deleting."),
       metadata: metadataSchema,
       extra: extraParamsSchema,
     },
     handler: async (args) => {
       const { id, extra, ...rest } = args;
       return lob.request({
-        method: "PATCH",
+        method: "POST",
         path: `/webhooks/${id}`,
         body: withExtra(rest, extra),
       });

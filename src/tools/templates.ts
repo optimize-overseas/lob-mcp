@@ -79,7 +79,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
     handler: async (args) => {
       const { id, extra, ...rest } = args;
       return lob.request({
-        method: "PATCH",
+        method: "POST",
         path: `/templates/${id}`,
         body: withExtra(rest, extra),
       });
@@ -165,7 +165,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
     handler: async (args) => {
       const { template_id, version_id, extra, ...rest } = args;
       return lob.request({
-        method: "PATCH",
+        method: "POST",
         path: `/templates/${template_id}/versions/${version_id}`,
         body: withExtra(rest, extra),
       });

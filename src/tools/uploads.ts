@@ -201,8 +201,13 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
         .string()
         .url()
         .describe("Image shown next to the mail-piece preview."),
-      ride_along_image_url: z.string().url(),
+      ride_along_image_url: z.string().url().describe("The creative image shown alongside the mail-piece preview."),
       target_url: z.string().url().describe("URL the recipient is sent to when they click."),
+      quantity: z
+        .number()
+        .int()
+        .positive()
+        .describe("Number of pieces in the Informed Delivery campaign."),
       description: z.string().max(255).optional(),
       extra: extraParamsSchema,
     },
@@ -251,7 +256,7 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
       date_scanned: dateFilterSchema.optional(),
     },
     handler: async (args) =>
-      lob.request({ method: "GET", path: "/qr_codes", query: compact(args) }),
+      lob.request({ method: "GET", path: "/qr_code_analytics", query: compact(args) }),
   });
 
   registerTool(server, {
@@ -262,6 +267,9 @@ export function registerUploadsTools(server: McpServer, lob: LobClient): void {
       "for review before committing to a mail send.",
     inputSchema: {
       resource_id: z.string().describe("ID of the resource to proof."),
+      resource_type: z
+        .enum(["postcard", "letter", "self_mailer", "check", "buckslip", "card"])
+        .describe("Type of resource being proofed."),
       extra: extraParamsSchema,
     },
     handler: async (args) => {

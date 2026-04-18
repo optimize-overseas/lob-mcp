@@ -6,18 +6,17 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) server for the [Lob
 
 ## Features
 
-- **76 tools** across **12 resource groups** covering the full Lob v1 API surface:
+- **74 tools** across **11 resource groups** covering the Lob v1 API surface:
   - Address book (CRUD)
-  - US + international address verification (single, bulk, autocomplete, reverse geocode, identity validation)
+  - US + international address verification (single, bulk, autocomplete, identity validation)
   - Postcards, letters, self-mailers, checks (create, list, retrieve, cancel)
   - Templates and template versions (CRUD)
-  - Campaigns and creatives (CRUD)
+  - Campaigns and creatives (CRUD — require live-mode key)
   - Buckslips, cards, and their print orders
-  - Informed Delivery campaigns
+  - Informed Delivery campaigns (require live-mode key)
   - QR-code analytics
   - Resource proofs (preview before send)
   - Bank accounts (CRUD + micro-deposit verification)
-  - USPS tracking events
   - Webhook subscriptions (CRUD)
 - **Idempotency** support on every billable create endpoint
 - **Test/live mode detection** from API key prefix, surfaced at startup
@@ -112,7 +111,6 @@ All tools are namespaced `lob_<resource>_<action>`. Annotation hints (`readOnlyH
 - `lob_us_autocompletions_create`
 - `lob_intl_verifications_create`
 - `lob_bulk_us_verifications_create` · `lob_bulk_intl_verifications_create`
-- `lob_reverse_geocode`
 - `lob_identity_validation`
 
 ### Postcards (billable on create)
@@ -160,10 +158,6 @@ All tools are namespaced `lob_<resource>_<action>`. Annotation hints (`readOnlyH
 ### Bank accounts (required to draw checks)
 
 - `lob_bank_accounts_create` · `lob_bank_accounts_list` · `lob_bank_accounts_get` · `lob_bank_accounts_delete` · `lob_bank_accounts_verify`
-
-### Tracking events
-
-- `lob_tracking_events_list`
 
 ### Webhooks
 

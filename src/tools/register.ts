@@ -14,7 +14,6 @@ import { registerLetterTools } from "./letters.js";
 import { registerPostcardTools } from "./postcards.js";
 import { registerSelfMailerTools } from "./self-mailers.js";
 import { registerTemplateTools } from "./templates.js";
-import { registerTrackingTools } from "./tracking.js";
 import { registerUploadsTools } from "./uploads.js";
 import { registerVerificationTools } from "./verifications.js";
 import { registerWebhookTools } from "./webhooks.js";
@@ -30,6 +29,5 @@ export function registerAllTools(server: McpServer, lob: LobClient): void {
   registerCampaignTools(server, lob);
   registerUploadsTools(server, lob);
   registerBankAccountTools(server, lob);
-  registerTrackingTools(server, lob);
   registerWebhookTools(server, lob);
 }
