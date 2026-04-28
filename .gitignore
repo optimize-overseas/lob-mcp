@@ -16,3 +16,4 @@ bestpractices/
 # Local test harness — contains live API keys, artifacts, and internal reports
 tests/
 .env.test
+.env.test.*
