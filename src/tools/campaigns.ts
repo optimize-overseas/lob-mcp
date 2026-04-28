@@ -120,25 +120,56 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
     name: "lob_creatives_create",
     annotations: { title: "Create a creative", readOnlyHint: false },
     description:
-      "Create a campaign creative — the artwork (front/back, etc.) used by a campaign for postcards, " +
-      "letters, or self-mailers.",
+      "Create a campaign creative — the artwork (front/back / inside/outside / file) used by a campaign " +
+      "for postcards, letters, or self-mailers. **Important:** unlike `lob_postcards_create` and the other " +
+      "mail-piece create tools, Lob's `/v1/creatives` endpoint does NOT accept HTML strings, remote URLs, " +
+      "or inline PDFs in the content fields — it accepts ONLY a Lob template ID (`tmpl_…`). To use a URL " +
+      "or HTML as creative content, first call `lob_templates_create` to upload it as a template, then " +
+      "pass the resulting `tmpl_…` here. Required by `resource_type`: postcard → `front` + `back`; " +
+      "letter → `file` + `from`; self_mailer → `inside` + `outside`. Live-mode key required.",
     inputSchema: {
       campaign_id: CAMPAIGN_ID.describe("Parent campaign ID."),
       resource_type: z.enum(["postcard", "letter", "self_mailer"]),
-      front: z.string().optional().describe("Front content source (HTML/URL/template/PDF)."),
-      back: z.string().optional().describe("Back content source."),
-      inside: z.string().optional(),
-      outside: z.string().optional(),
-      file: z.string().optional().describe("Letter file content source."),
+      front: z
+        .string()
+        .regex(/^tmpl_/)
+        .optional()
+        .describe("Postcard creative front: a Lob template ID (`tmpl_…`). Required for postcard creatives."),
+      back: z
+        .string()
+        .regex(/^tmpl_/)
+        .optional()
+        .describe("Postcard creative back: a Lob template ID (`tmpl_…`). Required for postcard creatives."),
+      inside: z
+        .string()
+        .regex(/^tmpl_/)
+        .optional()
+        .describe("Self-mailer creative inside: a Lob template ID."),
+      outside: z
+        .string()
+        .regex(/^tmpl_/)
+        .optional()
+        .describe("Self-mailer creative outside: a Lob template ID."),
+      file: z
+        .string()
+        .regex(/^tmpl_/)
+        .optional()
+        .describe("Letter creative file: a Lob template ID. Required for letter creatives."),
       details: z
         .record(z.unknown())
-        .optional()
-        .describe("Resource-specific details (size, color, etc.) per Lob docs."),
+        .default({})
+        .describe(
+          "Resource-specific options. Per Lob's spec, accepted keys for postcard creatives are " +
+            "`mail_type` (usps_first_class | usps_standard) and `size` (4x6 | 6x9 | 6x11). For letters: " +
+            "`mail_type`, `color`, `double_sided`, `address_placement`, `extra_service`. Empty `{}` is valid.",
+        ),
       description: z.string().max(255).optional(),
       from: z
-        .union([z.string(), z.record(z.unknown())])
+        .union([z.string().regex(/^adr_/), z.record(z.unknown())])
         .optional()
-        .describe("Sender address — saved address ID or inline."),
+        .describe(
+          "Sender address — saved address ID (`adr_…`) or inline. Required for letter creatives.",
+        ),
       metadata: metadataSchema,
       extra: extraParamsSchema,
     },
