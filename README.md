@@ -1,27 +1,27 @@
 # lob-mcp
 
-A [Model Context Protocol](https://modelcontextprotocol.io/) server for the [Lob.com](https://lob.com) API. Lets any MCP-compatible LLM (Claude, etc.) verify addresses and send physical mail — postcards, letters, self-mailers, and printed checks — through Lob.
+A [Model Context Protocol](https://modelcontextprotocol.io/) server for the [Lob.com](https://lob.com) API. Lets any MCP-compatible LLM (Claude, ChatGPT, etc.) verify addresses and send physical mail — postcards, letters, self-mailers, and printed checks — through Lob.
 
-> ⚠️ **Lob produces real physical mail and charges your account.** Mail-piece create tools (`lob_postcards_create`, `lob_letters_create`, `lob_self_mailers_create`, `lob_checks_create`, `lob_*_orders_create`) are billable. Develop with a `test_…` API key. Switch to `live_…` only when you are ready to ship real mail. Always pass an `idempotency_key` so retries don't duplicate sends.
+> ⚠️ **Lob produces real physical mail and charges your account.** Mail-piece create tools (`lob_postcards_create`, `lob_letters_create`, `lob_self_mailers_create`, `lob_checks_create`, `lob_buckslip_orders_create`, `lob_card_orders_create`) are billable. Develop with a `test_…` API key. Switch to `live_…` only when you are ready to ship real mail. Always pass an `idempotency_key` so retries don't duplicate sends.
 
 ## Features
 
-- **73 tools** across **11 resource groups** covering the Lob v1 API surface:
-  - Address book (CRUD)
-  - US + international address verification (single, bulk, autocomplete, identity validation)
-  - Postcards, letters, self-mailers, checks (create, list, retrieve, cancel)
-  - Templates and template versions (CRUD)
-  - Campaigns and creatives (CRUD — require live-mode key)
-  - Buckslips, cards, and their print orders
-  - Informed Delivery campaigns (require live-mode key)
-  - QR-code analytics
-  - Resource proofs (preview before send)
-  - Bank accounts (CRUD + micro-deposit verification)
-  - Webhook subscriptions (CRUD)
-- **Idempotency** support on every billable create endpoint
-- **Test/live mode detection** from API key prefix, surfaced at startup
-- **PII redaction** — address fields are stripped from error output
-- **Generic `extra` parameter** on every create/update tool — accepts any Lob parameter not enumerated in the schema, so you're never blocked by SDK lag
+- **70 tools** across **10 resource groups** covering the Lob v1 API:
+  - Address book — CRUD
+  - Address verification — US + international (single, bulk, autocomplete), identity validation
+  - Mail pieces — postcards, letters, self-mailers, checks (create, list, retrieve, cancel)
+  - Templates — CRUD on templates and their versions
+  - Campaigns + creatives — CRUD (live-mode key required for the campaigns API)
+  - Buckslips and cards — uploads + print orders
+  - QR-code analytics — list scan events
+  - Resource proofs — preview before send
+  - Bank accounts — register, verify (micro-deposit), CRUD
+  - Webhook subscriptions — CRUD
+- **Idempotency** support on every billable create endpoint — retries are safe by default.
+- **Test/live mode auto-detection** from the API key prefix; surfaced at startup so an LLM can adjust behavior accordingly.
+- **PII redaction** — recipient name, address, email, and phone fields are scrubbed from any error output before it crosses the MCP transport.
+- **Generic `extra` parameter** on every create/update tool — accepts any Lob parameter not enumerated in the schema, so you're never blocked by SDK lag.
+- **Spec-driven schemas** — tool input schemas mirror Lob's published OpenAPI spec, including correct field names, content-type quirks, and per-endpoint validation rules. Verified end-to-end against the live Lob API (test + live).
 
 ## Requirements
 
@@ -129,28 +129,28 @@ All tools are namespaced `lob_<resource>_<action>`. Annotation hints (`readOnlyH
 
 - `lob_checks_create` · `lob_checks_list` · `lob_checks_get` · `lob_checks_cancel`
 
-### Templates
+### Templates and template versions
 
 - `lob_templates_create` · `lob_templates_list` · `lob_templates_get` · `lob_templates_update` · `lob_templates_delete`
 - `lob_template_versions_create` · `lob_template_versions_list` · `lob_template_versions_get` · `lob_template_versions_update` · `lob_template_versions_delete`
 
-### Campaigns + creatives
+### Campaigns + creatives (live-mode key required)
 
 - `lob_campaigns_create` · `lob_campaigns_list` · `lob_campaigns_get` · `lob_campaigns_update` · `lob_campaigns_delete`
-- `lob_creatives_create` · `lob_creatives_list` · `lob_creatives_get` · `lob_creatives_update` · `lob_creatives_delete`
+- `lob_creatives_create` · `lob_creatives_get` · `lob_creatives_update` · `lob_creatives_delete`
 
-### Buckslips, cards, and print orders (orders are billable)
+> **Creative content quirk.** Lob's `/v1/creatives` endpoint accepts only Lob template IDs (`tmpl_…`) for the `front`, `back`, `inside`, `outside`, and `file` content fields — **not** HTML strings or remote URLs (which postcards / letters / self-mailers do accept). To use a URL or HTML as creative content, first call `lob_templates_create` to upload it as a template, then pass the resulting `tmpl_…` here.
+
+### Buckslips, cards, and print orders
 
 - `lob_buckslips_create` · `lob_buckslips_list` · `lob_buckslips_get`
-- `lob_buckslip_orders_create` · `lob_buckslip_orders_list`
+- `lob_buckslip_orders_create` (billable) · `lob_buckslip_orders_list`
 - `lob_cards_create` · `lob_cards_list` · `lob_cards_get`
-- `lob_card_orders_create` · `lob_card_orders_list`
+- `lob_card_orders_create` (billable) · `lob_card_orders_list`
 
-### Informed Delivery
+> Buckslip and card create endpoints require a publicly-reachable PDF URL with exact dimensions (8.75″×3.75″ for buckslips, 3.375″×2.125″ for cards). Lob's buckslip create accepts only `multipart/form-data` and is sent as such by this server.
 
-- `lob_informed_delivery_campaigns_create` · `lob_informed_delivery_campaigns_list` · `lob_informed_delivery_campaigns_get`
-
-### QR codes + resource proofs
+### QR codes and resource proofs
 
 - `lob_qr_codes_list`
 - `lob_resource_proofs_create` · `lob_resource_proofs_get` · `lob_resource_proofs_update`
@@ -173,7 +173,7 @@ This server enforces three safety practices appropriate for a real-money API:
 
 ## The `extra` escape hatch
 
-Lob's API has many resource-specific options that aren't worth enumerating in a tool schema (custom envelope IDs, perforation pages, billing groups, marketing flags, etc.). Every create/update tool accepts an optional `extra` object whose keys are merged verbatim into the request body:
+Lob's API has many resource-specific options that aren't worth enumerating in a tool schema (custom envelope IDs, perforation pages, billing groups, marketing flags, etc.). Every create/update tool accepts an optional `extra` object whose keys are merged verbatim into the request body, with explicitly-typed fields taking precedence:
 
 ```jsonc
 {
@@ -194,8 +194,8 @@ Refer to <https://docs.lob.com/> for the full set of parameters per resource.
 
 ```bash
 npm install
-npm run build
 npm run typecheck
+npm run build
 npm run inspector
 ```
 
@@ -207,10 +207,11 @@ The compiled output lives in `build/`. Source is in `src/`.
 src/
 ├── index.ts            # stdio entry — boots McpServer + LobClient
 ├── env.ts              # env loading + test/live mode detection
+├── version.ts          # SERVER_VERSION + USER_AGENT
 ├── lob/
-│   ├── client.ts       # fetch-based HTTP client (Basic auth, idempotency, errors)
+│   ├── client.ts       # fetch-based HTTP client (Basic auth, idempotency, asForm multipart)
 │   ├── errors.ts       # LobApiError + tool-friendly formatter
-│   └── redact.ts       # PII redaction
+│   └── redact.ts       # recursive PII redaction
 ├── schemas/
 │   ├── common.ts       # address, pagination, idempotency, metadata schemas
 │   └── mail.ts         # mail-piece-shared schemas
@@ -220,12 +221,13 @@ src/
     └── *.ts            # one file per resource group
 ```
 
-The HTTP client is intentionally thin — it does not depend on the official `lob-typescript-sdk`, which keeps the dependency surface small and gives this server tighter control over headers, retries, and PII handling. New Lob endpoints can be added by registering one more tool against the resource group file (or via the `extra` escape hatch on existing tools).
+The HTTP client is intentionally thin — it does not depend on the official `lob-typescript-sdk`, which keeps the dependency surface small and gives this server tighter control over headers, retries, multipart encoding, and PII handling. New Lob endpoints can be added by registering one more tool against the resource group file (or via the `extra` escape hatch on existing tools).
 
 ## Limitations
 
-- **Multipart file uploads** for resources that accept binary PDF/image bytes are supported by the underlying client (`asForm: true`) but not yet exposed in any tool — the current tools accept HTML strings, URLs, template IDs, and base64 data URIs, which covers the documented Lob content-source forms.
-- **OAuth** is not supported because Lob does not offer it; auth is HTTP Basic with an API key, per Lob's docs.
+- **Multipart file uploads from disk** are supported by the underlying client (`asForm: true`) but the user-facing tools accept content via URL, HTML string, or Lob template ID — not a local filesystem path. This covers the documented Lob content-source forms for an LLM-driven workflow.
+- **OAuth** is not supported because Lob does not offer it. Auth is HTTP Basic with an API key, per Lob's docs.
+- **Some endpoints require a live-mode key**: the campaigns + creatives API and the verification-retrieval endpoint return 403 in test mode.
 
 ## Contributing
 
