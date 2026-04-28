@@ -1,6 +1,6 @@
 {
   "name": "lob-mcp",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "MCP server for the Lob.com API - 70 tools for address verification, postcards, letters, self-mailers, checks, templates, campaigns, and webhooks.",
   "type": "module",
   "bin": {
