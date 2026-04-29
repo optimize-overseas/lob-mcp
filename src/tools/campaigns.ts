@@ -16,7 +16,7 @@ import {
   metadataSchema,
   withExtra,
 } from "../schemas/common.js";
-import { registerTool } from "./helpers.js";
+import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
 const CAMPAIGN_ID = z.string().regex(/^cmp_/).describe("Campaign ID (`cmp_…`).");
 const CREATIVE_ID = z.string().regex(/^crv_/).describe("Creative ID (`crv_…`).");
@@ -26,7 +26,7 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_campaigns_create",
-    annotations: { title: "Create a campaign", readOnlyHint: false },
+    annotations: { title: "Create a campaign", ...ToolAnnotationPresets.mutate },
     description:
       "Create a campaign — a container for batched mail-piece sends with a shared creative, schedule, " +
       "and audience. Creating a campaign does not by itself send mail; you trigger sends per Lob docs.",
@@ -62,7 +62,7 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_campaigns_list",
-    annotations: { title: "List campaigns", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "List campaigns", ...ToolAnnotationPresets.read },
     description: "List campaigns on your Lob account.",
     inputSchema: { ...listParamsSchema.shape },
     handler: async (args) =>
@@ -71,7 +71,7 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_campaigns_get",
-    annotations: { title: "Retrieve a campaign", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "Retrieve a campaign", ...ToolAnnotationPresets.read },
     description: "Retrieve a single campaign by ID.",
     inputSchema: { id: CAMPAIGN_ID },
     handler: async ({ id }) => lob.request({ method: "GET", path: `/campaigns/${id}` }),
@@ -79,7 +79,7 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_campaigns_update",
-    annotations: { title: "Update a campaign", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Update a campaign", ...ToolAnnotationPresets.mutate },
     description: "Update a campaign's metadata or schedule before it has been sent.",
     inputSchema: {
       id: CAMPAIGN_ID,
@@ -103,12 +103,7 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_campaigns_delete",
-    annotations: {
-      title: "Delete a campaign",
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
-    },
+    annotations: { title: "Delete a campaign", ...ToolAnnotationPresets.destructive },
     description: "Delete a campaign. Only allowed before send.",
     inputSchema: { id: CAMPAIGN_ID },
     handler: async ({ id }) => lob.request({ method: "DELETE", path: `/campaigns/${id}` }),
@@ -118,7 +113,7 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_creatives_create",
-    annotations: { title: "Create a creative", readOnlyHint: false },
+    annotations: { title: "Create a creative", ...ToolAnnotationPresets.mutate },
     description:
       "Create a campaign creative — the artwork (front/back / inside/outside / file) used by a campaign " +
       "for postcards, letters, or self-mailers. **Important:** unlike `lob_postcards_create` and the other " +
@@ -185,7 +180,7 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_creatives_get",
-    annotations: { title: "Retrieve a creative", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "Retrieve a creative", ...ToolAnnotationPresets.read },
     description: "Retrieve a single creative by ID.",
     inputSchema: { id: CREATIVE_ID },
     handler: async ({ id }) => lob.request({ method: "GET", path: `/creatives/${id}` }),
@@ -193,7 +188,7 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_creatives_update",
-    annotations: { title: "Update a creative", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Update a creative", ...ToolAnnotationPresets.mutate },
     description: "Update a creative's description or metadata.",
     inputSchema: {
       id: CREATIVE_ID,
@@ -213,12 +208,7 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_creatives_delete",
-    annotations: {
-      title: "Delete a creative",
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
-    },
+    annotations: { title: "Delete a creative", ...ToolAnnotationPresets.destructive },
     description: "Delete a creative.",
     inputSchema: { id: CREATIVE_ID },
     handler: async ({ id }) => lob.request({ method: "DELETE", path: `/creatives/${id}` }),

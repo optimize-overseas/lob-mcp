@@ -15,12 +15,12 @@ import {
   metadataSchema,
   withExtra,
 } from "../schemas/common.js";
-import { registerTool } from "./helpers.js";
+import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
 export function registerAddressBookTools(server: McpServer, lob: LobClient): void {
   registerTool(server, {
     name: "lob_addresses_create",
-    annotations: { title: "Save address to address book", readOnlyHint: false },
+    annotations: { title: "Save address to address book", ...ToolAnnotationPresets.mutate },
     description:
       "Save an address to the Lob address book so it can be reused by ID (`adr_…`) when " +
       "creating mail pieces. Stored addresses are NOT automatically verified — call " +
@@ -43,7 +43,7 @@ export function registerAddressBookTools(server: McpServer, lob: LobClient): voi
 
   registerTool(server, {
     name: "lob_addresses_list",
-    annotations: { title: "List address book entries", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "List address book entries", ...ToolAnnotationPresets.read },
     description: "List addresses stored in your Lob address book. Supports cursor pagination.",
     inputSchema: { ...listParamsSchema.shape },
     handler: async (args) =>
@@ -52,7 +52,7 @@ export function registerAddressBookTools(server: McpServer, lob: LobClient): voi
 
   registerTool(server, {
     name: "lob_addresses_get",
-    annotations: { title: "Retrieve a saved address", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "Retrieve a saved address", ...ToolAnnotationPresets.read },
     description: "Retrieve a single saved address by ID.",
     inputSchema: { id: z.string().regex(/^adr_/).describe("Lob address ID (`adr_…`).") },
     handler: async ({ id }) => lob.request({ method: "GET", path: `/addresses/${id}` }),
@@ -62,9 +62,7 @@ export function registerAddressBookTools(server: McpServer, lob: LobClient): voi
     name: "lob_addresses_delete",
     annotations: {
       title: "Delete a saved address",
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
+      ...ToolAnnotationPresets.destructive,
     },
     description:
       "Delete a saved address from the address book. Does not affect mail pieces already created with it.",

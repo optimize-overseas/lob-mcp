@@ -8,6 +8,7 @@
  * taking precedence so the schema can't be silently overridden).
  */
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 
 /**
  * An inline US/international address payload accepted by Lob create endpoints.
@@ -53,6 +54,25 @@ export const idempotencyKeySchema = z
     "Optional idempotency key. Forwarded as the `Idempotency-Key` header so retries do not duplicate billable mail. " +
       "Use a UUID per logical request and reuse it on retries.",
   );
+
+/**
+ * Auto-generating variant: server fills in a UUIDv4 if the caller doesn't pass
+ * one. Lob deduplicates identical keys for 24 hours. The preview/commit helper
+ * derives this from the confirmation_token when one is consumed, so retries
+ * carrying the same token de-dupe at Lob automatically.
+ */
+export const idempotencyKeyAutoSchema = z
+  .string()
+  .min(1)
+  .max(256)
+  .optional()
+  .describe(
+    "Idempotency key (max 256 chars). If omitted, the server auto-generates a value derived from the " +
+      "confirmation_token when present, otherwise a fresh UUIDv4. Lob deduplicates identical keys for 24 hours.",
+  );
+
+/** Convenience UUIDv4 generator — exported so callers can pre-generate keys for cross-tool correlation. */
+export const generateIdempotencyKey = (): string => randomUUID();
 
 /** Lob date-range filter shape: { gt, gte, lt, lte } each an ISO 8601 timestamp. */
 export const dateFilterSchema = z

@@ -13,14 +13,14 @@ import {
   metadataSchema,
   withExtra,
 } from "../schemas/common.js";
-import { registerTool } from "./helpers.js";
+import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
 const WH_ID = z.string().regex(/^(whk_|ep_)/).describe("Webhook ID (`ep_…`).");
 
 export function registerWebhookTools(server: McpServer, lob: LobClient): void {
   registerTool(server, {
     name: "lob_webhooks_create",
-    annotations: { title: "Create a webhook subscription", readOnlyHint: false },
+    annotations: { title: "Create a webhook subscription", ...ToolAnnotationPresets.mutate },
     description:
       "Subscribe an HTTPS endpoint to receive Lob event notifications (e.g. 'postcard.mailed', " +
       "'letter.in_transit', 'check.delivered'). The endpoint must respond with 2xx within 5 seconds.",
@@ -46,7 +46,7 @@ export function registerWebhookTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_webhooks_list",
-    annotations: { title: "List webhooks", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "List webhooks", ...ToolAnnotationPresets.read },
     description: "List webhook subscriptions on your account.",
     inputSchema: { ...listParamsSchema.shape },
     handler: async (args) =>
@@ -55,7 +55,7 @@ export function registerWebhookTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_webhooks_get",
-    annotations: { title: "Retrieve a webhook", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "Retrieve a webhook", ...ToolAnnotationPresets.read },
     description: "Retrieve a single webhook subscription by ID.",
     inputSchema: { id: WH_ID },
     handler: async ({ id }) => lob.request({ method: "GET", path: `/webhooks/${id}` }),
@@ -63,7 +63,7 @@ export function registerWebhookTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_webhooks_update",
-    annotations: { title: "Update a webhook", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Update a webhook", ...ToolAnnotationPresets.mutate },
     description:
       "Update a webhook's URL, event subscriptions, or description. Note: the `disabled` flag on the " +
       "response is Lob-managed (e.g. Lob auto-disables webhooks whose delivery URL consistently fails) " +
@@ -88,12 +88,7 @@ export function registerWebhookTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_webhooks_delete",
-    annotations: {
-      title: "Delete a webhook",
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
-    },
+    annotations: { title: "Delete a webhook", ...ToolAnnotationPresets.destructive },
     description: "Delete a webhook subscription.",
     inputSchema: { id: WH_ID },
     handler: async ({ id }) => lob.request({ method: "DELETE", path: `/webhooks/${id}` }),

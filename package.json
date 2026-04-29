@@ -1,7 +1,7 @@
 {
   "name": "lob-mcp",
-  "version": "0.1.4",
-  "description": "MCP server for the Lob.com API - 70 tools for address verification, postcards, letters, self-mailers, checks, templates, campaigns, and webhooks.",
+  "version": "1.0.0",
+  "description": "MCP server for the Lob.com API — 76 tools with preview/commit gating, idempotency, and exact piece-count caps for safe LLM-driven physical mail.",
   "type": "module",
   "bin": {
     "lob-mcp": "build/index.js"
@@ -14,7 +14,8 @@
     "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
     "inspector": "npx @modelcontextprotocol/inspector build/index.js",
-    "start": "node build/index.js"
+    "start": "node build/index.js",
+    "test": "node --test --import tsx 'tests/unit/**/*.test.ts'"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.22.0",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@types/node": "^22.10.0",
     "pdf-lib": "^1.17.1",
+    "tsx": "^4.19.0",
     "typescript": "^5.6.3"
   },
   "keywords": [
