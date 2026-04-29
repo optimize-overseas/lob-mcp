@@ -14,7 +14,7 @@ import {
   metadataSchema,
   withExtra,
 } from "../schemas/common.js";
-import { registerTool } from "./helpers.js";
+import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
 const TEMPLATE_ID = z.string().regex(/^tmpl_/).describe("Template ID (`tmpl_…`).");
 const VERSION_ID = z.string().regex(/^vrsn_/).describe("Template version ID (`vrsn_…`).");
@@ -22,7 +22,7 @@ const VERSION_ID = z.string().regex(/^vrsn_/).describe("Template version ID (`vr
 export function registerTemplateTools(server: McpServer, lob: LobClient): void {
   registerTool(server, {
     name: "lob_templates_create",
-    annotations: { title: "Create a template", readOnlyHint: false },
+    annotations: { title: "Create a template", ...ToolAnnotationPresets.mutate },
     description:
       "Create a reusable HTML template that can be referenced by ID (`tmpl_…`) when creating mail pieces. " +
       "Supports Handlebars-style `{{variables}}` for runtime substitution.",
@@ -48,7 +48,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_templates_list",
-    annotations: { title: "List templates", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "List templates", ...ToolAnnotationPresets.read },
     description: "List templates on your Lob account.",
     inputSchema: { ...listParamsSchema.shape },
     handler: async (args) =>
@@ -57,7 +57,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_templates_get",
-    annotations: { title: "Retrieve a template", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "Retrieve a template", ...ToolAnnotationPresets.read },
     description: "Retrieve a single template (including its published version) by ID.",
     inputSchema: { id: TEMPLATE_ID },
     handler: async ({ id }) => lob.request({ method: "GET", path: `/templates/${id}` }),
@@ -65,7 +65,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_templates_update",
-    annotations: { title: "Update a template", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Update a template", ...ToolAnnotationPresets.mutate },
     description:
       "Update a template's metadata or published version. To publish a new version, set " +
       "`published_version` to a version ID (`vrsn_…`).",
@@ -88,12 +88,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_templates_delete",
-    annotations: {
-      title: "Delete a template",
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
-    },
+    annotations: { title: "Delete a template", ...ToolAnnotationPresets.destructive },
     description:
       "Delete a template. Mail pieces already created from it are unaffected; future references will fail.",
     inputSchema: { id: TEMPLATE_ID },
@@ -104,7 +99,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_template_versions_create",
-    annotations: { title: "Create a template version", readOnlyHint: false },
+    annotations: { title: "Create a template version", ...ToolAnnotationPresets.mutate },
     description:
       "Add a new version of a template's HTML. Creating a new version does NOT automatically publish it — " +
       "use `lob_templates_update` to set `published_version`.",
@@ -127,7 +122,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_template_versions_list",
-    annotations: { title: "List template versions", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "List template versions", ...ToolAnnotationPresets.read },
     description: "List all versions of a template.",
     inputSchema: {
       template_id: TEMPLATE_ID,
@@ -145,7 +140,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_template_versions_get",
-    annotations: { title: "Retrieve a template version", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "Retrieve a template version", ...ToolAnnotationPresets.read },
     description: "Retrieve a specific version of a template.",
     inputSchema: { template_id: TEMPLATE_ID, version_id: VERSION_ID },
     handler: async ({ template_id, version_id }) =>
@@ -154,7 +149,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_template_versions_update",
-    annotations: { title: "Update a template version", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Update a template version", ...ToolAnnotationPresets.mutate },
     description: "Update the description of a template version. HTML cannot be modified after creation.",
     inputSchema: {
       template_id: TEMPLATE_ID,
@@ -174,12 +169,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
 
   registerTool(server, {
     name: "lob_template_versions_delete",
-    annotations: {
-      title: "Delete a template version",
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
-    },
+    annotations: { title: "Delete a template version", ...ToolAnnotationPresets.destructive },
     description: "Delete a template version. Cannot delete the currently published version.",
     inputSchema: { template_id: TEMPLATE_ID, version_id: VERSION_ID },
     handler: async ({ template_id, version_id }) =>

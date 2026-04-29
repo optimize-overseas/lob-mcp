@@ -1,55 +1,123 @@
 /**
- * Self-mailer tools — create / list / get / cancel. A self-mailer is a folded,
- * tabbed mail piece (no envelope) used for promotional and transactional sends.
+ * Self-mailer tools — preview / create / list / get / cancel.
  *
- * `lob_self_mailers_create` is BILLABLE.
+ * `lob_self_mailers_create` is BILLABLE; gated behind `lob_self_mailers_preview`
+ * in live mode. Preview renders against the test key via /resource_proofs.
  */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";
+import type { TokenStore } from "../preview/token-store.js";
+import { buildPreviewCommit } from "../preview/preview-commit.js";
+import type { PieceCounter } from "../safety/piece-counter.js";
 import {
   compact,
   extraParamsSchema,
-  idempotencyKeySchema,
+  idempotencyKeyAutoSchema,
   listParamsSchema,
   mailTypeSchema,
   withExtra,
 } from "../schemas/common.js";
 import { contentSourceSchema, mailPieceCommonShape } from "../schemas/mail.js";
-import { registerTool } from "./helpers.js";
+import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
-const SELF_MAILER_ID = z.string().regex(/^sfm_/).describe("Self-mailer ID (`sfm_…`).");
+const SELF_MAILER_ID = z
+  .string()
+  .regex(/^sfm_/)
+  .describe("Self-mailer ID (`sfm_…`).");
 const SELF_MAILER_SIZE = z.enum(["6x18_bifold", "11x9_bifold"]);
 
-export function registerSelfMailerTools(server: McpServer, lob: LobClient): void {
-  registerTool(server, {
-    name: "lob_self_mailers_create",
-    annotations: { title: "Create a self-mailer (BILLABLE)", readOnlyHint: false },
-    description:
-      "Create and queue a folded, tabbed self-mailer for printing and mailing. **Billable**. " +
-      "Always pass `idempotency_key` to prevent duplicates on retry. Sizes: 6x18_bifold (default), 11x9_bifold.",
-    inputSchema: {
-      ...mailPieceCommonShape,
-      inside: contentSourceSchema.describe("Inside-of-self-mailer content source."),
-      outside: contentSourceSchema.describe("Outside-of-self-mailer content source."),
-      size: SELF_MAILER_SIZE.optional().describe("Self-mailer size. Defaults to 6x18_bifold."),
-      idempotency_key: idempotencyKeySchema,
-      extra: extraParamsSchema,
-    },
-    handler: async (args) => {
-      const { idempotency_key, extra, ...rest } = args;
-      return lob.request({
-        method: "POST",
-        path: "/self_mailers",
-        body: withExtra(rest, extra),
-        idempotencyKey: idempotency_key,
-      });
+const selfMailerCreateShape = {
+  ...mailPieceCommonShape,
+  inside: contentSourceSchema.describe("Inside-of-self-mailer content source."),
+  outside: contentSourceSchema.describe("Outside-of-self-mailer content source."),
+  size: SELF_MAILER_SIZE.optional().describe(
+    "Self-mailer size. Defaults to 6x18_bifold.",
+  ),
+  idempotency_key: idempotencyKeyAutoSchema,
+  extra: extraParamsSchema,
+} as const;
+
+const selfMailerCommitShape = {
+  ...selfMailerCreateShape,
+  confirmation_token: z
+    .string()
+    .optional()
+    .describe(
+      "Token from lob_self_mailers_preview. Required in live mode (LOB_LIVE_MODE=true).",
+    ),
+} as const;
+
+export function registerSelfMailerTools(
+  server: McpServer,
+  lob: LobClient,
+  tokenStore: TokenStore,
+  pieceCounter: PieceCounter,
+): void {
+  const pc = buildPreviewCommit({
+    baseName: "lob_self_mailers",
+    baseSchema: selfMailerCreateShape,
+    ctx: {
+      env: lob.env,
+      tokenStore,
+      renderPreview: async (payload) => {
+        return lob.request({
+          method: "POST",
+          path: "/resource_proofs",
+          body: {
+            resource_type: "self_mailer",
+            resource_parameters: stripCommitOnly(payload),
+          },
+          keyMode: "test",
+        });
+      },
+      beforeDispatch: async () => {
+        pieceCounter.checkAndReserve(1);
+      },
+      callCommit: async (payload, { idempotencyKey }) => {
+        const { extra, ...rest } = payload as Record<string, unknown>;
+        const out = await lob.request({
+          method: "POST",
+          path: "/self_mailers",
+          body: withExtra(rest, extra as Record<string, unknown> | undefined),
+          idempotencyKey,
+        });
+        pieceCounter.record(1);
+        return out;
+      },
     },
   });
 
   registerTool(server, {
+    name: "lob_self_mailers_preview",
+    annotations: {
+      title: "Preview a self-mailer",
+      ...ToolAnnotationPresets.preview,
+    },
+    description:
+      "Render a Lob proof PDF for a self-mailer without charging or sending. Returns a " +
+      "`confirmation_token` to pass to lob_self_mailers_create. Required in live mode.",
+    inputSchema: selfMailerCreateShape,
+    handler: pc.preview,
+  });
+
+  registerTool(server, {
+    name: "lob_self_mailers_create",
+    annotations: {
+      title: "Create a self-mailer (BILLABLE)",
+      ...ToolAnnotationPresets.commit,
+    },
+    description:
+      "Commit a self-mailer send. **Billable** in live mode. Requires a `confirmation_token` from " +
+      "lob_self_mailers_preview that matches the current payload (live mode only). " +
+      "Sizes: 6x18_bifold (default), 11x9_bifold.",
+    inputSchema: selfMailerCommitShape,
+    handler: pc.commit,
+  });
+
+  registerTool(server, {
     name: "lob_self_mailers_list",
-    annotations: { title: "List self-mailers", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "List self-mailers", ...ToolAnnotationPresets.read },
     description: "List self-mailers on your Lob account.",
     inputSchema: {
       ...listParamsSchema.shape,
@@ -63,22 +131,32 @@ export function registerSelfMailerTools(server: McpServer, lob: LobClient): void
 
   registerTool(server, {
     name: "lob_self_mailers_get",
-    annotations: { title: "Retrieve a self-mailer", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "Retrieve a self-mailer", ...ToolAnnotationPresets.read },
     description: "Retrieve a single self-mailer by ID.",
     inputSchema: { id: SELF_MAILER_ID },
-    handler: async ({ id }) => lob.request({ method: "GET", path: `/self_mailers/${id}` }),
+    handler: async ({ id }) =>
+      lob.request({ method: "GET", path: `/self_mailers/${id}` }),
   });
 
   registerTool(server, {
     name: "lob_self_mailers_cancel",
     annotations: {
       title: "Cancel a scheduled self-mailer",
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
+      ...ToolAnnotationPresets.destructive,
     },
     description: "Cancel a self-mailer before its `send_date`.",
     inputSchema: { id: SELF_MAILER_ID },
-    handler: async ({ id }) => lob.request({ method: "DELETE", path: `/self_mailers/${id}` }),
+    handler: async ({ id }) =>
+      lob.request({ method: "DELETE", path: `/self_mailers/${id}` }),
   });
+}
+
+function stripCommitOnly(payload: Record<string, unknown>): Record<string, unknown> {
+  const {
+    idempotency_key: _i,
+    extra: _e,
+    confirmation_token: _t,
+    ...rest
+  } = payload;
+  return rest;
 }

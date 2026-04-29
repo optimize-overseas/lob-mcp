@@ -7,7 +7,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";
 import { extraParamsSchema, withExtra } from "../schemas/common.js";
-import { registerTool } from "./helpers.js";
+import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
 const usAddressInputSchema = {
   primary_line: z.string().describe("Primary street address line."),
@@ -36,7 +36,7 @@ const intlAddressInputSchema = {
 export function registerVerificationTools(server: McpServer, lob: LobClient): void {
   registerTool(server, {
     name: "lob_us_verifications_create",
-    annotations: { title: "Verify a US address", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Verify a US address", ...ToolAnnotationPresets.read },
     description:
       "Verify, correct, and standardize a single US address. Returns deliverability status, " +
       "USPS-formatted components, geolocation (lat/lng), and county info.",
@@ -60,7 +60,7 @@ export function registerVerificationTools(server: McpServer, lob: LobClient): vo
 
   registerTool(server, {
     name: "lob_us_verifications_get",
-    annotations: { title: "Retrieve a US verification", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "Retrieve a US verification", ...ToolAnnotationPresets.read },
     description: "Retrieve a previously-created US verification by ID.",
     inputSchema: { id: z.string().describe("US verification ID (`us_ver_…`).") },
     handler: async ({ id }) => lob.request({ method: "GET", path: `/us_verifications/${id}` }),
@@ -68,7 +68,7 @@ export function registerVerificationTools(server: McpServer, lob: LobClient): vo
 
   registerTool(server, {
     name: "lob_us_autocompletions_create",
-    annotations: { title: "Autocomplete a US address", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Autocomplete a US address", ...ToolAnnotationPresets.read },
     description:
       "Suggest completed US addresses from a partial input — useful for typeahead UX. Returns up to 10 suggestions.",
     inputSchema: {
@@ -94,7 +94,7 @@ export function registerVerificationTools(server: McpServer, lob: LobClient): vo
 
   registerTool(server, {
     name: "lob_intl_verifications_create",
-    annotations: { title: "Verify an international address", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Verify an international address", ...ToolAnnotationPresets.read },
     description:
       "Verify a single non-US address. Returns deliverability status and standardized components for " +
       "the destination country.",
@@ -116,7 +116,7 @@ export function registerVerificationTools(server: McpServer, lob: LobClient): vo
 
   registerTool(server, {
     name: "lob_bulk_us_verifications_create",
-    annotations: { title: "Bulk verify US addresses", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Bulk verify US addresses", ...ToolAnnotationPresets.read },
     description:
       "Verify up to 1,000 US addresses in a single request. Returns one verification result per " +
       "input, in the same order.",
@@ -137,7 +137,7 @@ export function registerVerificationTools(server: McpServer, lob: LobClient): vo
 
   registerTool(server, {
     name: "lob_bulk_intl_verifications_create",
-    annotations: { title: "Bulk verify international addresses", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Bulk verify international addresses", ...ToolAnnotationPresets.read },
     description: "Verify up to 1,000 non-US addresses in a single request.",
     inputSchema: {
       addresses: z.array(z.object(intlAddressInputSchema).passthrough()).min(1).max(1000),
@@ -155,7 +155,7 @@ export function registerVerificationTools(server: McpServer, lob: LobClient): vo
 
   registerTool(server, {
     name: "lob_identity_validation",
-    annotations: { title: "Validate identity for an address", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Validate identity for an address", ...ToolAnnotationPresets.read },
     description:
       "Validate a person/business name against a US address. Returns whether the recipient is " +
       "associated with the address.",

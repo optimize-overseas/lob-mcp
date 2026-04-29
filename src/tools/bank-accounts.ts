@@ -14,14 +14,14 @@ import {
   metadataSchema,
   withExtra,
 } from "../schemas/common.js";
-import { registerTool } from "./helpers.js";
+import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
 const BANK_ID = z.string().regex(/^bank_/).describe("Bank account ID (`bank_…`).");
 
 export function registerBankAccountTools(server: McpServer, lob: LobClient): void {
   registerTool(server, {
     name: "lob_bank_accounts_create",
-    annotations: { title: "Create a bank account", readOnlyHint: false },
+    annotations: { title: "Create a bank account", ...ToolAnnotationPresets.mutate },
     description:
       "Register a bank account that can be used to draw checks. Requires routing number, account " +
       "number, account type, and signatory. Bank accounts must be verified (`lob_bank_accounts_verify`) " +
@@ -47,7 +47,7 @@ export function registerBankAccountTools(server: McpServer, lob: LobClient): voi
 
   registerTool(server, {
     name: "lob_bank_accounts_list",
-    annotations: { title: "List bank accounts", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "List bank accounts", ...ToolAnnotationPresets.read },
     description: "List bank accounts on your Lob account.",
     inputSchema: { ...listParamsSchema.shape },
     handler: async (args) =>
@@ -56,7 +56,7 @@ export function registerBankAccountTools(server: McpServer, lob: LobClient): voi
 
   registerTool(server, {
     name: "lob_bank_accounts_get",
-    annotations: { title: "Retrieve a bank account", readOnlyHint: true, idempotentHint: true },
+    annotations: { title: "Retrieve a bank account", ...ToolAnnotationPresets.read },
     description: "Retrieve a single bank account by ID.",
     inputSchema: { id: BANK_ID },
     handler: async ({ id }) => lob.request({ method: "GET", path: `/bank_accounts/${id}` }),
@@ -64,12 +64,7 @@ export function registerBankAccountTools(server: McpServer, lob: LobClient): voi
 
   registerTool(server, {
     name: "lob_bank_accounts_delete",
-    annotations: {
-      title: "Delete a bank account",
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
-    },
+    annotations: { title: "Delete a bank account", ...ToolAnnotationPresets.destructive },
     description: "Remove a bank account. Pending checks drawn against it will continue to clear.",
     inputSchema: { id: BANK_ID },
     handler: async ({ id }) => lob.request({ method: "DELETE", path: `/bank_accounts/${id}` }),
@@ -77,7 +72,7 @@ export function registerBankAccountTools(server: McpServer, lob: LobClient): voi
 
   registerTool(server, {
     name: "lob_bank_accounts_verify",
-    annotations: { title: "Verify a bank account", readOnlyHint: false, idempotentHint: true },
+    annotations: { title: "Verify a bank account", ...ToolAnnotationPresets.mutate },
     description:
       "Verify a bank account by submitting two micro-deposit amounts (in cents) that Lob deposited " +
       "into the account during registration. Required before the account can be used to draw checks.",

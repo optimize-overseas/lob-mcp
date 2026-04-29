@@ -1,13 +1,16 @@
 /**
  * Thin fetch-based HTTP client for the Lob.com REST API.
  *
- * Intentionally does NOT depend on `@lob/lob-typescript-sdk` — we want full control
- * over headers (Idempotency-Key, Lob-Version, User-Agent), nested-bracket query
- * encoding (`metadata[batch_id]=…`), and PII handling. The cost is keeping the
- * surface small and routing all requests through the single `request()` method.
+ * Carries TWO Basic-auth headers — one per key. Callers pick which key to use via
+ * `keyMode: "test" | "live"`. Default tracks env.effectiveMode (live when both
+ * LOB_LIVE_API_KEY and LOB_LIVE_MODE=true are present, else test).
  *
- * Auth is HTTP Basic with the API key as the username and an empty password,
- * per Lob's documentation. There is no OAuth.
+ * Previews always pass `keyMode: "test"` so the proof endpoint runs against the
+ * test key regardless of whether live mode is enabled.
+ *
+ * Asserts at runtime that any POST to a billable create path carries an
+ * Idempotency-Key. This is a programmer-error guard for the preview/commit
+ * helper — the assertion fires before any network call.
  */
 import { loadEnv, type LobEnv } from "../env.js";
 import { USER_AGENT } from "../version.js";
@@ -23,22 +26,56 @@ export interface RequestOptions {
   asForm?: boolean;
   /** Override the Lob-Version header for this request only. */
   lobVersion?: string | undefined;
+  /**
+   * test = use test key. live = use live key when configured (else falls back to test).
+   * Default: env.effectiveMode.
+   */
+  keyMode?: "test" | "live";
 }
+
+/** POST paths that always require an Idempotency-Key header. */
+const BILLABLE_POST_PATHS: RegExp[] = [
+  /^\/postcards\b/,
+  /^\/letters\b/,
+  /^\/self_mailers\b/,
+  /^\/checks\b/,
+  /^\/buckslips\/[^/]+\/orders\b/,
+  /^\/cards\/[^/]+\/orders\b/,
+];
 
 export class LobClient {
   readonly env: LobEnv;
-  private readonly authHeader: string;
+  private readonly testAuth: string;
+  private readonly liveAuth: string | null;
 
   constructor(env?: LobEnv) {
     this.env = env ?? loadEnv();
-    this.authHeader =
-      "Basic " + Buffer.from(`${this.env.apiKey}:`, "utf8").toString("base64");
+    this.testAuth =
+      "Basic " + Buffer.from(`${this.env.testApiKey}:`, "utf8").toString("base64");
+    this.liveAuth = this.env.liveApiKey
+      ? "Basic " + Buffer.from(`${this.env.liveApiKey}:`, "utf8").toString("base64")
+      : null;
   }
 
   async request<T = unknown>(opts: RequestOptions): Promise<T> {
+    if (
+      opts.method === "POST" &&
+      BILLABLE_POST_PATHS.some((rx) => rx.test(opts.path)) &&
+      !opts.idempotencyKey
+    ) {
+      throw new Error(
+        `Idempotency-Key required for POST ${opts.path}. This is a programmer bug — every billable ` +
+          "create path must pass an idempotency key (use buildPreviewCommit or pass explicitly).",
+      );
+    }
+
+    const requestedMode = opts.keyMode ?? this.env.effectiveMode;
+    const auth =
+      requestedMode === "live" && this.liveAuth ? this.liveAuth : this.testAuth;
+
     const url = this.buildUrl(opts.path, opts.query);
     const headers: Record<string, string> = {
-      Authorization: this.authHeader,
+      Authorization: auth,
       Accept: "application/json",
       "User-Agent": USER_AGENT,
     };
