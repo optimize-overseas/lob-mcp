@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.1.0 — 2026-04-29 (Design specs release)
+
+The 1.0 hardening release verified the preview/commit + dual-key + idempotency
+path end-to-end with a real test postcard. That postcard's back-side body text
+was clipped by Lob's auto-stamped address block — the model had no way to know
+about the 3.2835″×2.375″ ink-free zone. 1.1 makes the spec discoverable so
+this won't happen again.
+
+### Added
+
+- **12 JSON design-spec resources** at `lob://specs/{mail_type}/{variant}.json`
+  covering postcards (4x6, 6x9, 6x11), letters (standard_no10, flat_9x12,
+  legal_8.5x14, custom_envelope), self-mailers (6x18_bifold, 11x9_bifold),
+  checks (standard), buckslips (standard), and cards (standard). Each spec
+  includes dimensions in inches, bleed, safe area, surface descriptions, no-print
+  zones with anchor + offset semantics, file-format requirements (PDF/X-1a, CMYK,
+  300 DPI, ≤5 MB, embedded fonts), critical_constraints[] strings the model can
+  paraphrase into design briefs, and references to Lob's source URL.
+- **11 bundled PDF template resources** at `lob://specs/{mail_type}/{variant}.pdf`
+  served as base64 blobs from `build/specs/pdfs/`. No external fetch — the
+  templates ship with the npm package. Refreshable via
+  `scripts/download-spec-pdfs.mjs`. (No PDF for `card/standard` — Lob does not
+  publish a standalone card template; the JSON spec covers dimensions.)
+- **`lob_design_specs_get(mail_type, variant)` fallback tool** — returns the
+  same JSON inline. For hosts that under-implement MCP resources.
+- **Inline `design_spec` field in every `*_preview` response.** The model has
+  the no-print-zone coordinates in scope when reviewing a Lob proof, so it can
+  self-audit before committing.
+- `scripts/download-spec-pdfs.mjs` and `scripts/copy-spec-pdfs.mjs` build
+  helpers — the build step now packs the PDFs into `build/specs/pdfs/`.
+
+### Tests
+
+- **89 new unit tests** covering: every (mail_type, variant) combo via
+  `findSpec`, every PDF resource's file presence and PDF magic-number, every
+  fallback-tool data-path lookup, dot-to-underscore filename mapping, and
+  bundle cache behavior. Total unit suite: 47 → 136.
+- **Integration smoke extended** from 11 → 22 checks against Lob's live test
+  API: every JSON URI read, every PDF URI read, every fallback tool variant
+  invocation, plus the inline `design_spec` field on postcard and check
+  previews. The bug-driver dimensions (3.2835×2.375 back zone on 4x6) are
+  asserted explicitly.
+
+### Internal
+
+- Tool count: 76 → 77. Resources: 0 → 23. Total exposed primitives: 76 → 100.
+
+### Future work
+
+- A `lob_design_lint(mail_type, variant, asset_url)` tool that fetches a
+  candidate design and validates dimensions, asset reachability, font
+  embedding, and no-print-zone overlap.
+- MCP prompts for guided design briefs (parameterized).
+- Spec for the cards standalone PDF template once Lob publishes one.
+
 ## 1.0.0 — 2026-04-29 (Hardening release)
 
 The first stable release. Adds a layered safety harness so an LLM cannot

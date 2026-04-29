@@ -23,6 +23,7 @@ import {
   metadataSchema,
   withExtra,
 } from "../schemas/common.js";
+import { findSpec } from "../specs/manifest.js";
 import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
 const BUCKSLIP_ID = z.string().regex(/^bck_/).describe("Buckslip ID (`bck_…`).");
@@ -141,6 +142,7 @@ export function registerUploadsTools(
           "will be rejected.",
         buckslip_id: payload.buckslip_id,
         quantity_ordered: payload.quantity_ordered,
+        design_spec: findSpec("buckslip", "standard"),
       }),
       beforeDispatch: async (payload, serverCtx) => {
         const qty = Number(payload.quantity_ordered);
@@ -268,6 +270,7 @@ export function registerUploadsTools(
           "returned confirmation_token binds the inventory_id and quantity.",
         card_id: payload.card_id,
         quantity: payload.quantity,
+        design_spec: findSpec("card", "standard"),
       }),
       beforeDispatch: async (payload, serverCtx) => {
         const qty = Number(payload.quantity);

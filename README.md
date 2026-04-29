@@ -2,7 +2,7 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io/) server for the [Lob.com](https://lob.com) API. Lets any MCP-compatible LLM (Claude, ChatGPT, etc.) verify addresses and send physical mail — postcards, letters, self-mailers, and printed checks — through Lob.
 
-> ⚠️ **Lob produces real physical mail and charges your account.** lob-mcp 1.0 ships a layered safety harness: dual-key configuration (test required, live optional), preview/commit gating with payload binding, mandatory idempotency, an exact piece-count cap, and optional narrow elicitation for high-value sends. Default mode is **test**. Live mode requires an explicit opt-in.
+> ⚠️ **Lob produces real physical mail and charges your account.** lob-mcp ships a layered safety harness: dual-key configuration (test required, live optional), preview/commit gating with payload binding, mandatory idempotency, an exact piece-count cap, optional narrow elicitation for high-value sends, and bundled Lob design-spec resources so AI design tools can produce print-correct artwork that respects auto-stamped address blocks. Default mode is **test**. Live mode requires an explicit opt-in.
 
 ## Quick start
 
@@ -14,7 +14,7 @@ Walks through keys + safety caps, then prints a paste-ready Claude Desktop confi
 
 ## Features
 
-- **76 tools** across 11 resource groups — address verification, address book, postcards, letters, self-mailers, checks, templates, campaigns + creatives, buckslips/cards + print orders, QR-code analytics, resource proofs, bank accounts, and webhooks.
+- **77 tools + 23 design-spec resources** across 12 resource groups — address verification, address book, postcards, letters, self-mailers, checks, templates, campaigns + creatives, buckslips/cards + print orders, QR-code analytics, resource proofs, bank accounts, webhooks, and design specifications.
 - **Preview/commit split** on every billable resource — `lob_<resource>_preview` returns a Lob-rendered proof PDF (postcards/letters/self-mailers) or a textual summary (checks/inventory orders) plus a `confirmation_token`. The matching `lob_<resource>_create` requires that token in live mode and rejects payload mutations.
 - **Dual-key model** — `LOB_TEST_API_KEY` (always required) is used for previews. `LOB_LIVE_API_KEY` (optional) is used for commits when `LOB_LIVE_MODE=true`. Previews always render against the test key, so a real Lob proof PDF is returned regardless of whether live mode is enabled.
 - **Idempotency by default** on every billable POST — auto-generated when omitted; deterministic from the confirmation token when present, so retries de-dupe at Lob automatically.
@@ -23,6 +23,7 @@ Walks through keys + safety caps, then prints a paste-ready Claude Desktop confi
 - **Complete tool annotation matrix** — every tool sets `readOnlyHint`, `destructiveHint`, `idempotentHint`, and `openWorldHint` so hosts can render appropriate confirmation prompts.
 - **PII redaction** in error output.
 - **Generic `extra` parameter** on every create/update tool — any Lob field not enumerated in the schema is merged verbatim.
+- **Design-spec resources** — Lob's official template PDFs and structured JSON specs (dimensions, bleed, safe area, no-print zones, file-format requirements) for every supported variant. AI tools can fetch them before generating artwork to avoid the auto-stamped address-block clipping that catches naive designs.
 - **Spec-driven schemas** mirroring Lob's published OpenAPI spec, verified against Lob's live API.
 
 ## Requirements
@@ -148,6 +149,53 @@ The 1.0 hardening release implements a layered safety harness:
 7. **PII redaction.** Address, name, and contact fields are stripped from any error payload echoed back to the client. The full request body is never logged.
 
 If you only do one thing, run `lob-mcp init` and accept the recommended `LOB_MAX_PIECES_PER_RUN` value.
+
+## Design specifications
+
+lob-mcp exposes Lob's official mail-piece design specifications so AI design tools can produce print-correct artwork. Three access surfaces, all reading from a single source-of-truth manifest:
+
+### MCP resources (recommended)
+
+Hosts that support MCP resources (Claude Desktop, MCP Inspector, Cursor 0.40+, most modern agent frameworks) can browse and attach specs to chat context:
+
+- **JSON spec** — `lob://specs/{mail_type}/{variant}.json` returns structured data: dimensions (in inches), bleed, safe area, no-print zones with anchor + offset semantics, surface descriptions, and file-format requirements.
+- **PDF template** — `lob://specs/{mail_type}/{variant}.pdf` returns Lob's official boundary template as a base64 blob, bundled with the npm package (no external fetch).
+
+`resources/list` returns 23 entries (12 JSON + 11 PDF — `card` has a JSON spec but no Lob-published PDF). Each is annotated with `audience: ["user", "assistant"]` so hosts surface them in resource pickers.
+
+### Inline in preview responses
+
+Every `lob_*_preview` tool response includes a `design_spec` field with the spec for the variant being previewed. The model has the no-print-zone coordinates in scope when reviewing a Lob proof, so it can self-audit before committing.
+
+### Fallback tool
+
+For hosts without resource support, call `lob_design_specs_get(mail_type, variant)` — same JSON, returned inline.
+
+### Supported variants
+
+| `mail_type` | `variant` | PDF? |
+|---|---|---|
+| `postcard` | `4x6`, `6x9`, `6x11` | ✓ |
+| `letter` | `standard_no10`, `flat_9x12`, `legal_8.5x14`, `custom_envelope` | ✓ |
+| `self_mailer` | `6x18_bifold`, `11x9_bifold` | ✓ |
+| `check` | `standard` | ✓ |
+| `buckslip` | `standard` | ✓ |
+| `card` | `standard` | (Lob does not publish a standalone PDF) |
+
+### Why this matters
+
+Lob auto-stamps the recipient address, IMb barcode, and postage indicia onto specific zones of every billable mail piece. A 4×6 postcard, for example, has a 3.2835″×2.375″ ink-free zone in the lower-right of the back side — any text or critical artwork placed there will be clipped at print. The spec resources document this zone (and every other surface constraint) in machine-readable form so an LLM can lay out artwork that respects it.
+
+### Refreshing PDF templates
+
+Maintainers can pull the latest PDFs from Lob's S3 with:
+
+```bash
+node scripts/download-spec-pdfs.mjs
+npm run build
+```
+
+Re-commit the refreshed `specs/pdfs/*.pdf` files. The build step copies them into `build/specs/pdfs/` so they ship in the npm tarball.
 
 ## Tool reference
 

@@ -27,6 +27,7 @@ import {
   withExtra,
 } from "../schemas/common.js";
 import { contentSourceSchema, mailPieceCommonShape } from "../schemas/mail.js";
+import { findSpec } from "../specs/manifest.js";
 import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
 const CHECK_ID = z.string().regex(/^chk_/).describe("Check ID (`chk_…`).");
@@ -106,6 +107,7 @@ export function registerCheckTools(
         amount_usd: payload.amount,
         check_number: payload.check_number ?? "auto-assigned",
         memo: payload.memo,
+        design_spec: findSpec("check", "standard"),
       }),
       beforeDispatch: async (payload, serverCtx) => {
         pieceCounter.checkAndReserve(1);

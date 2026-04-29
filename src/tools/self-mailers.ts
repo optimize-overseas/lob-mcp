@@ -19,6 +19,7 @@ import {
   withExtra,
 } from "../schemas/common.js";
 import { contentSourceSchema, mailPieceCommonShape } from "../schemas/mail.js";
+import { findSpec } from "../specs/manifest.js";
 import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
 const SELF_MAILER_ID = z
@@ -61,7 +62,7 @@ export function registerSelfMailerTools(
       env: lob.env,
       tokenStore,
       renderPreview: async (payload) => {
-        return lob.request({
+        const proof = (await lob.request({
           method: "POST",
           path: "/resource_proofs",
           body: {
@@ -69,7 +70,9 @@ export function registerSelfMailerTools(
             resource_parameters: stripCommitOnly(payload),
           },
           keyMode: "test",
-        });
+        })) as Record<string, unknown>;
+        const variant = (payload.size as string | undefined) ?? "6x18_bifold";
+        return { ...proof, design_spec: findSpec("self_mailer", variant) };
       },
       beforeDispatch: async () => {
         pieceCounter.checkAndReserve(1);
