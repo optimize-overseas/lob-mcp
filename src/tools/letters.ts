@@ -29,6 +29,7 @@ import {
   doubleSidedSchema,
   mailPieceCommonShape,
 } from "../schemas/mail.js";
+import { findSpec } from "../specs/manifest.js";
 import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
 const LETTER_ID = z.string().regex(/^ltr_/).describe("Letter ID (`ltr_…`).");
@@ -92,7 +93,7 @@ export function registerLetterTools(
       env: lob.env,
       tokenStore,
       renderPreview: async (payload) => {
-        return lob.request({
+        const proof = (await lob.request({
           method: "POST",
           path: "/resource_proofs",
           body: {
@@ -100,7 +101,11 @@ export function registerLetterTools(
             resource_parameters: stripCommitOnly(payload),
           },
           keyMode: "test",
-        });
+        })) as Record<string, unknown>;
+        const variant = (payload as Record<string, unknown>).custom_envelope
+          ? "custom_envelope"
+          : "standard_no10";
+        return { ...proof, design_spec: findSpec("letter", variant) };
       },
       beforeDispatch: async () => {
         pieceCounter.checkAndReserve(1);

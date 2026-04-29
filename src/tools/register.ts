@@ -23,6 +23,7 @@ import { registerTemplateTools } from "./templates.js";
 import { registerUploadsTools } from "./uploads.js";
 import { registerVerificationTools } from "./verifications.js";
 import { registerWebhookTools } from "./webhooks.js";
+import { registerSpecsResources } from "../specs/register.js";
 
 export function registerAllTools(
   server: McpServer,
@@ -41,4 +42,5 @@ export function registerAllTools(
   registerUploadsTools(server, lob, tokenStore, pieceCounter);
   registerBankAccountTools(server, lob);
   registerWebhookTools(server, lob);
+  registerSpecsResources(server);
 }

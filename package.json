@@ -1,7 +1,7 @@
 {
   "name": "lob-mcp",
-  "version": "1.0.0",
-  "description": "MCP server for the Lob.com API — 76 tools with preview/commit gating, idempotency, and exact piece-count caps for safe LLM-driven physical mail.",
+  "version": "1.1.0",
+  "description": "MCP server for the Lob.com API — 77 tools + 23 design-spec resources for safe, print-correct LLM-driven physical mail (preview/commit, idempotency, piece caps, bundled Lob design templates).",
   "type": "module",
   "bin": {
     "lob-mcp": "build/index.js"
@@ -10,7 +10,7 @@
     "build"
   ],
   "scripts": {
-    "build": "tsc && chmod 755 build/index.js",
+    "build": "tsc && chmod 755 build/index.js && node scripts/copy-spec-pdfs.mjs",
     "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
     "inspector": "npx @modelcontextprotocol/inspector build/index.js",

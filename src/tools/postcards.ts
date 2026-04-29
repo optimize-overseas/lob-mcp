@@ -22,6 +22,7 @@ import {
   withExtra,
 } from "../schemas/common.js";
 import { contentSourceSchema, mailPieceCommonShape } from "../schemas/mail.js";
+import { findSpec } from "../specs/manifest.js";
 import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
 const POSTCARD_ID = z.string().regex(/^psc_/).describe("Postcard ID (`psc_…`).");
@@ -59,7 +60,7 @@ export function registerPostcardTools(
       env: lob.env,
       tokenStore,
       renderPreview: async (payload) => {
-        return lob.request({
+        const proof = (await lob.request({
           method: "POST",
           path: "/resource_proofs",
           body: {
@@ -67,7 +68,9 @@ export function registerPostcardTools(
             resource_parameters: stripCommitOnly(payload),
           },
           keyMode: "test",
-        });
+        })) as Record<string, unknown>;
+        const variant = (payload.size as string | undefined) ?? "4x6";
+        return { ...proof, design_spec: findSpec("postcard", variant) };
       },
       beforeDispatch: async () => {
         pieceCounter.checkAndReserve(1);
