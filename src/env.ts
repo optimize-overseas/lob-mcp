@@ -24,10 +24,13 @@ export interface LobEnv {
   maxPiecesPerRun: number | null;
   requireElicitationForChecksOverUsd: number | null;
   requireElicitationForBulkOverPieces: number | null;
+  /** Per-request HTTP timeout for outbound Lob calls, in milliseconds. */
+  requestTimeoutMs: number;
 }
 
 const DEFAULT_BASE_URL = "https://api.lob.com/v1";
 const DEFAULT_TTL_SECONDS = 600;
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 
 function parseBool(raw: string | undefined, fallback: boolean): boolean {
   if (raw === undefined) return fallback;
@@ -86,6 +89,20 @@ export function loadEnv(): LobEnv {
   const baseUrl = (process.env.LOB_BASE_URL?.trim() || DEFAULT_BASE_URL).replace(/\/+$/, "");
   const apiVersion = process.env.LOB_API_VERSION?.trim() || undefined;
 
+  const rawTimeout = process.env.LOB_REQUEST_TIMEOUT_MS;
+  let requestTimeoutMs: number;
+  if (rawTimeout === undefined || rawTimeout.trim() === "") {
+    requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS;
+  } else {
+    const parsed = Number(rawTimeout);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      throw new Error(
+        `LOB_REQUEST_TIMEOUT_MS must be a positive integer (ms), got '${rawTimeout}'.`,
+      );
+    }
+    requestTimeoutMs = Math.floor(parsed);
+  }
+
   return {
     testApiKey,
     liveApiKey: liveApiKey || null,
@@ -103,5 +120,6 @@ export function loadEnv(): LobEnv {
     requireElicitationForBulkOverPieces: parsePositiveNumber(
       process.env.LOB_REQUIRE_ELICITATION_FOR_BULK_OVER_PIECES,
     ),
+    requestTimeoutMs,
   };
 }

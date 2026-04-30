@@ -1,7 +1,7 @@
 {
   "name": "lob-mcp",
-  "version": "1.1.0",
-  "description": "MCP server for the Lob.com API — 77 tools + 23 design-spec resources for safe, print-correct LLM-driven physical mail (preview/commit, idempotency, piece caps, bundled Lob design templates).",
+  "version": "1.2.0",
+  "description": "MCP server for the Lob.com API — 78 tools + 23 design-spec resources for safe, print-correct LLM-driven physical mail (preview/commit, idempotency, piece caps, bundled Lob design templates).",
   "type": "module",
   "bin": {
     "lob-mcp": "build/index.js"

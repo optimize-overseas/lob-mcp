@@ -14,7 +14,7 @@
  */
 import { loadEnv, type LobEnv } from "../env.js";
 import { USER_AGENT } from "../version.js";
-import { LobApiError, type LobErrorBody } from "./errors.js";
+import { LobApiError, LobTimeoutError, type LobErrorBody } from "./errors.js";
 
 export interface RequestOptions {
   method: "GET" | "POST" | "PATCH" | "DELETE" | "PUT";
@@ -93,9 +93,38 @@ export class LobClient {
       }
     }
 
-    const res = await fetch(url, { method: opts.method, headers, body });
+    // Per-request AbortController: each call gets its own signal so a slow
+    // request can't abort siblings, and the timer is always cleared on settle.
+    const controller = new AbortController();
+    const timeoutMs = this.env.requestTimeoutMs;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: opts.method,
+        headers,
+        body,
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (controller.signal.aborted) {
+        throw new LobTimeoutError(opts.path, timeoutMs);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
     const requestId = res.headers.get("x-request-id") ?? undefined;
-    const text = await res.text();
+    let text: string;
+    try {
+      text = await res.text();
+    } catch (err) {
+      // Body read can also abort if the response stalls between headers and body.
+      if (controller.signal.aborted) {
+        throw new LobTimeoutError(opts.path, timeoutMs);
+      }
+      throw err;
+    }
     const json = text ? safeParse(text) : undefined;
 
     if (!res.ok) {

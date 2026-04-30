@@ -14,7 +14,7 @@ Walks through keys + safety caps, then prints a paste-ready Claude Desktop confi
 
 ## Features
 
-- **77 tools + 23 design-spec resources** across 12 resource groups — address verification, address book, postcards, letters, self-mailers, checks, templates, campaigns + creatives, buckslips/cards + print orders, QR-code analytics, resource proofs, bank accounts, webhooks, and design specifications.
+- **78 tools + 23 design-spec resources** across 12 resource groups — address verification, address book, postcards, letters, self-mailers, checks, templates (incl. `lob_templates_search`), campaigns + creatives, buckslips/cards + print orders, QR-code analytics, resource proofs, bank accounts, webhooks, and design specifications.
 - **Preview/commit split** on every billable resource — `lob_<resource>_preview` returns a Lob-rendered proof PDF (postcards/letters/self-mailers) or a textual summary (checks/inventory orders) plus a `confirmation_token`. The matching `lob_<resource>_create` requires that token in live mode and rejects payload mutations.
 - **Dual-key model** — `LOB_TEST_API_KEY` (always required) is used for previews. `LOB_LIVE_API_KEY` (optional) is used for commits when `LOB_LIVE_MODE=true`. Previews always render against the test key, so a real Lob proof PDF is returned regardless of whether live mode is enabled.
 - **Idempotency by default** on every billable POST — auto-generated when omitted; deterministic from the confirmation token when present, so retries de-dupe at Lob automatically.
@@ -93,6 +93,7 @@ The server is configured entirely through environment variables. Run `lob-mcp in
 |---|---|---|
 | `LOB_API_VERSION` | _(account default)_ | Pin a specific Lob API version via the `Lob-Version` header (e.g. `2020-02-11`). |
 | `LOB_BASE_URL` | `https://api.lob.com/v1` | Override the Lob API base URL. |
+| `LOB_REQUEST_TIMEOUT_MS` | `30000` | Per-request HTTP timeout for outbound Lob calls. A timeout surfaces as a `LobTimeoutError` whose tool message points back at this knob. Each request gets its own `AbortController` — slow requests cannot abort siblings. |
 
 ## Use with Claude Desktop
 

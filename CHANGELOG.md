@@ -1,5 +1,62 @@
 # Changelog
 
+## 1.2.0 — 2026-04-30 (Templates payload + timeout release)
+
+A real-world MCP timeout was traced to `lob_templates_list` returning the full
+HTML body of every template. On a busy account (89 templates) this is ~75 MB
+per call, which blows past MCP tool-call budgets and LLM context windows. 1.2
+fixes the symptom (timeout) and the root cause (payload size), and adds the
+search tool the model needed in the first place.
+
+### Added
+
+- **`lob_templates_search(description_contains, metadata, limit, max_pages)`** —
+  case-insensitive substring match across template descriptions plus optional
+  Lob metadata filter. Pages through `/templates` server-side and returns slim
+  matches with `pages_searched`, `truncated`, and `more_available` flags. Fixes
+  the "I know the template by name but not by `tmpl_…` id" UX hole.
+- **Per-request HTTP timeout** in `LobClient` via `AbortController`, default
+  30 s, configurable via `LOB_REQUEST_TIMEOUT_MS`. Surfaces as a new
+  `LobTimeoutError` whose `formatErrorForTool` message points the caller at the
+  env knob. Each request gets its own controller — a slow request cannot abort
+  siblings.
+
+### Changed
+
+- **`lob_templates_list` and `lob_template_versions_list` are slim by default.**
+  They now strip `published_version.html` and drop the historical `versions[]`
+  array (replaced with `version_count`) before returning. On the verifying
+  account this took the default `limit=100` payload from **75 MB → 309 KB**
+  (245× shrink) while preserving everything the model needs to choose a
+  template — id, description, metadata, dates, `merge_variables.keys`. Pass
+  `include_html: true` to get the full HTML, or call `lob_templates_get(id)`
+  for the single full record. Tool count: **77 → 78**.
+- **List-response size guard.** Every `_list` tool response is capped at 1.5 MB
+  of JSON; oversized responses throw a clear error pointing at `limit`,
+  `include_html`, or `lob_templates_search`. Belt-and-suspenders for
+  pathological accounts.
+
+### Tests
+
+- **47 new unit tests** across `timeout.test.ts` (11), `timeout-stress.test.ts`
+  (7), `templates-slim.test.ts` (12), `templates-tools.test.ts` (7), and
+  `templates-search.test.ts` (10). The stress suite exercises 100-200 concurrent
+  requests with mixed delays, sequential repeats with no progressive slowdown,
+  uniform timeout across resource paths, and bounded timer accounting.
+  Total unit suite: 136 → 183.
+- **Live verification harness** `tests/live-templates-verify.mjs` exercises the
+  slim default, `include_html` size-guard trip, search-by-description, and the
+  timeout fast-path against Lob's real test API. 6/6 pass.
+- Integration smoke updated to expect 78 tools (was 77). 22/22 still pass.
+
+### Internal
+
+- New `src/tools/templates-slim.ts` — pure helpers (`slimTemplate`,
+  `slimTemplateVersion`, `slimTemplateList`, `slimTemplateVersionList`) so the
+  shape transform is unit-testable independently of the tool layer.
+- New `LobTimeoutError` class in `src/lob/errors.ts` with custom
+  `formatErrorForTool` branch.
+
 ## 1.1.0 — 2026-04-29 (Design specs release)
 
 The 1.0 hardening release verified the preview/commit + dual-key + idempotency

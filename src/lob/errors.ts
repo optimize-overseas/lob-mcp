@@ -42,6 +42,23 @@ export class LobApiError extends Error {
   }
 }
 
+/**
+ * Surfaced when a request to Lob exceeds the configured per-request timeout.
+ * Distinct from LobApiError so tool callers can branch on the error class
+ * (or the friendlier message produced by `formatErrorForTool`).
+ */
+export class LobTimeoutError extends Error {
+  readonly path: string;
+  readonly timeoutMs: number;
+
+  constructor(path: string, timeoutMs: number) {
+    super(`Lob request to ${path} timed out after ${timeoutMs}ms.`);
+    this.name = "LobTimeoutError";
+    this.path = path;
+    this.timeoutMs = timeoutMs;
+  }
+}
+
 /** Server-side error codes surfaced to tools when our own guards reject a call. */
 export const LobMcpErrorCodes = {
   TOKEN_REQUIRED: "LOB_TOKEN_REQUIRED",
@@ -68,6 +85,13 @@ export class LobMcpError extends Error {
 }
 
 export function formatErrorForTool(err: unknown): string {
+  if (err instanceof LobTimeoutError) {
+    return (
+      `Lob request timed out: the call to ${err.path} did not complete within ${err.timeoutMs}ms. ` +
+      `This usually means Lob is slow or the response is large; retry, or raise the budget via ` +
+      `LOB_REQUEST_TIMEOUT_MS.`
+    );
+  }
   if (err instanceof LobMcpError) {
     return err.nextStep
       ? `${err.code}: ${err.message} Next: ${err.nextStep}`
