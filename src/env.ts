@@ -2,13 +2,23 @@
  * Environment loading and Lob test/live key handling.
  *
  * The 1.0 model uses TWO keys:
- *   • LOB_TEST_API_KEY (required) — used for previews via /resource_proofs and for
- *     all tool calls when live mode is not enabled.
- *   • LOB_LIVE_API_KEY (optional) — used for commits when LOB_LIVE_MODE=true.
+ *   • LOB_TEST_API_KEY (required) — used for previews via /resource_proofs and as
+ *     the fallback for everything when no live key is configured.
+ *   • LOB_LIVE_API_KEY (optional) — used for live-account work.
  *
- * Effective mode determines what `*_create` calls actually do:
- *   • test  — no real mail, no charges. The default.
- *   • live  — real mail, real charges. Requires both LOB_LIVE_API_KEY AND LOB_LIVE_MODE=true.
+ * Two effective modes route operations to the correct key:
+ *   • effectiveCommitMode — gates BILLABLE COMMITS (the 6 mail-piece / inventory
+ *     `*_create` tools). Goes "live" only when both LOB_LIVE_API_KEY AND
+ *     LOB_LIVE_MODE=true are set. Default test.
+ *   • effectiveReadMode — gates everything else (lists, gets, searches, cancels,
+ *     deletes, non-billable creates/updates, verifications). Goes "live"
+ *     whenever LOB_LIVE_API_KEY is configured — analytics questions like
+ *     "how many letters last week?" are about real account data, and reads
+ *     have no billing risk. Set LOB_READS_USE_TEST=true to force reads back
+ *     onto the test key (uncommon — useful in dev environments where the live
+ *     key is mounted but you want test responses).
+ *
+ * Previews always run against the test key regardless of either mode.
  */
 
 export interface LobEnv {
@@ -16,9 +26,12 @@ export interface LobEnv {
   liveApiKey: string | null;
   apiVersion: string | undefined;
   baseUrl: string;
+  /** True when LOB_LIVE_MODE=true AND a live key is configured. Drives commit gating. */
   liveModeEnabled: boolean;
-  /** What commits actually run against. Reads default to this too. */
-  effectiveMode: "test" | "live";
+  /** Routes billable commit POSTs. "live" only when liveModeEnabled. */
+  effectiveCommitMode: "test" | "live";
+  /** Routes everything that is NOT a billable commit. "live" whenever liveApiKey is set, unless LOB_READS_USE_TEST=true. */
+  effectiveReadMode: "test" | "live";
   requireConfirmation: boolean;
   confirmationTtlSeconds: number;
   maxPiecesPerRun: number | null;
@@ -84,7 +97,11 @@ export function loadEnv(): LobEnv {
     );
   }
   const liveModeEnabled = liveModeRequested && Boolean(liveApiKey);
-  const effectiveMode: LobEnv["effectiveMode"] = liveModeEnabled ? "live" : "test";
+  const effectiveCommitMode: LobEnv["effectiveCommitMode"] = liveModeEnabled ? "live" : "test";
+
+  const readsUseTest = parseBool(process.env.LOB_READS_USE_TEST, false);
+  const effectiveReadMode: LobEnv["effectiveReadMode"] =
+    liveApiKey && !readsUseTest ? "live" : "test";
 
   const baseUrl = (process.env.LOB_BASE_URL?.trim() || DEFAULT_BASE_URL).replace(/\/+$/, "");
   const apiVersion = process.env.LOB_API_VERSION?.trim() || undefined;
@@ -109,7 +126,8 @@ export function loadEnv(): LobEnv {
     apiVersion,
     baseUrl,
     liveModeEnabled,
-    effectiveMode,
+    effectiveCommitMode,
+    effectiveReadMode,
     requireConfirmation: parseBool(process.env.LOB_REQUIRE_CONFIRMATION, true),
     confirmationTtlSeconds:
       parsePositiveNumber(process.env.LOB_CONFIRMATION_TTL_SECONDS) ?? DEFAULT_TTL_SECONDS,

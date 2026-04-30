@@ -16,7 +16,7 @@ Walks through keys + safety caps, then prints a paste-ready Claude Desktop confi
 
 - **78 tools + 23 design-spec resources** across 12 resource groups — address verification, address book, postcards, letters, self-mailers, checks, templates (incl. `lob_templates_search`), campaigns + creatives, buckslips/cards + print orders, QR-code analytics, resource proofs, bank accounts, webhooks, and design specifications.
 - **Preview/commit split** on every billable resource — `lob_<resource>_preview` returns a Lob-rendered proof PDF (postcards/letters/self-mailers) or a textual summary (checks/inventory orders) plus a `confirmation_token`. The matching `lob_<resource>_create` requires that token in live mode and rejects payload mutations.
-- **Dual-key model** — `LOB_TEST_API_KEY` (always required) is used for previews. `LOB_LIVE_API_KEY` (optional) is used for commits when `LOB_LIVE_MODE=true`. Previews always render against the test key, so a real Lob proof PDF is returned regardless of whether live mode is enabled.
+- **Dual-key model with split read/commit modes** — `LOB_TEST_API_KEY` (always required) backs previews and is the fallback for everything. `LOB_LIVE_API_KEY` (optional) drives commits when `LOB_LIVE_MODE=true` AND drives reads (lists, gets, searches) automatically whenever it's configured, so analytics like "how many letters last week?" return real-account data without unlocking billable sends. `LOB_READS_USE_TEST=true` overrides the read default. Previews always render against the test key.
 - **Idempotency by default** on every billable POST — auto-generated when omitted; deterministic from the confirmation token when present, so retries de-dupe at Lob automatically.
 - **Exact piece-count cap** via `LOB_MAX_PIECES_PER_RUN`. Hard ceiling, not estimate.
 - **Narrow elicitation (off by default)** — opt-in confirmation forms for check `amount` over a USD threshold or bulk inventory orders over a piece threshold.
@@ -66,16 +66,30 @@ The server is configured entirely through environment variables. Run `lob-mcp in
 
 | Variable | Required | Description |
 |---|---|---|
-| `LOB_TEST_API_KEY` | **Yes** | Lob `test_…` key. Used for previews via `/resource_proofs` and for all calls when live mode is not enabled. |
-| `LOB_LIVE_API_KEY` | No | Lob `live_…` key. Used for commits when `LOB_LIVE_MODE=true`. Without it, billable commits run in test mode (no real mail). |
+| `LOB_TEST_API_KEY` | **Yes** | Lob `test_…` key. Used for previews via `/resource_proofs` and as the fallback for everything when no live key is configured. |
+| `LOB_LIVE_API_KEY` | No | Lob `live_…` key. Used for live-account work — see Modes below. |
 
 > **Migration from 0.x:** `LOB_API_KEY` has been replaced. A `test_…` key in `LOB_API_KEY` is silently accepted as the test key (soft fallback). A `live_…` key in `LOB_API_KEY` is rejected with a migration error — set `LOB_TEST_API_KEY` and `LOB_LIVE_API_KEY` explicitly.
 
-### Mode
+### Modes
 
-| Variable | Default | Description |
-|---|---|---|
-| `LOB_LIVE_MODE` | `false` | Set to `true` to enable real mail and charges. Requires `LOB_LIVE_API_KEY`. |
+The server has **two independent mode switches**, one for billable commits and one for reads. This separation exists because reads (`how many letters last week?`) want real-account data, but billable commits (`send 10,000 letters`) want a separate explicit opt-in.
+
+| Variable | Default | Controls | Description |
+|---|---|---|---|
+| `LOB_LIVE_MODE` | `false` | **Commit mode** | Set to `true` to enable real mail and charges for the 6 billable `*_create` tools (postcards, letters, self-mailers, checks, buckslip orders, card orders). Requires `LOB_LIVE_API_KEY`. Without `LOB_LIVE_MODE=true`, billable commits stay on the test key — no real mail, no charges. |
+| `LOB_READS_USE_TEST` | `false` | **Read mode** (opt-out) | When `LOB_LIVE_API_KEY` is configured, **read tools (lists, gets, searches, cancels, non-billable creates, verifications) automatically query the live account** so analytics return real data. Set this to `true` to force reads back onto the test key (uncommon — useful in dev environments where the live key is mounted but you want test responses). |
+
+**Typical configurations:**
+
+| Setup | Test key | Live key | `LOB_LIVE_MODE` | Result |
+|---|---|---|---|---|
+| Test-only | ✅ | — | — | Reads + commits both on test. |
+| Cautious analytics (recommended) | ✅ | ✅ | unset | **Reads on live, commits on test** — real analytics, safe commits. |
+| Full live | ✅ | ✅ | `true` | Reads + commits both on live. |
+| Force test reads | ✅ | ✅ | any | + `LOB_READS_USE_TEST=true` → reads on test regardless. |
+
+The boot banner prints both modes on startup so you can verify how requests will route before invoking any tool.
 
 ### Safety knobs
 
@@ -141,7 +155,7 @@ Then open the URL printed to your terminal. Set `LOB_TEST_API_KEY` (and optional
 
 The 1.0 hardening release implements a layered safety harness:
 
-1. **Default test mode.** Without `LOB_LIVE_MODE=true`, every commit runs against the test key — no real mail, no charges. Read tools work the same in either mode.
+1. **Default test commits.** Without `LOB_LIVE_MODE=true`, every billable `*_create` runs against the test key — no real mail, no charges. Reads route by their own switch (see Modes above): if a live key is configured they default to the live account so analytics return real data, but `LOB_READS_USE_TEST=true` forces them back to test.
 2. **Preview/commit split.** Every billable tool has a matching `*_preview` that calls Lob via the test key against `/resource_proofs` (postcards/letters/self-mailers) or returns a textual summary (checks/inventory orders). The preview returns a `confirmation_token`. Calling `*_create` in live mode requires that token AND rejects any payload mutation between preview and commit.
 3. **Mandatory idempotency.** No billable POST leaves the server without an `Idempotency-Key`. The server auto-generates a UUID if you don't supply one; when a confirmation token is present, the key is `lob-mcp-${token}` so retrying the same commit de-duplicates at Lob (24-hour window).
 4. **Exact piece cap.** `LOB_MAX_PIECES_PER_RUN` is checked at commit time. Exceeding it raises `LOB_PIECE_CAP_EXCEEDED` before any Lob call.

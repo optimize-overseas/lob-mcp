@@ -49,7 +49,11 @@ export async function runWizardIfRequested(argv: string[]): Promise<boolean> {
 
     let enableLive = false;
     if (liveKey) {
-      const answer = (await ask("Enable live mode now? (y/N): ")).toLowerCase();
+      const answer = (
+        await ask(
+          "Enable LIVE COMMITS now? (real mail, real charges; reads always use the live key when configured) (y/N): ",
+        )
+      ).toLowerCase();
       enableLive = answer === "y" || answer === "yes";
     }
 

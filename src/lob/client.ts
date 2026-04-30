@@ -2,11 +2,17 @@
  * Thin fetch-based HTTP client for the Lob.com REST API.
  *
  * Carries TWO Basic-auth headers — one per key. Callers pick which key to use via
- * `keyMode: "test" | "live"`. Default tracks env.effectiveMode (live when both
- * LOB_LIVE_API_KEY and LOB_LIVE_MODE=true are present, else test).
+ * `keyMode: "test" | "live"`. When the caller does not supply one, the client
+ * picks based on the operation kind:
+ *   • Billable POST (matches BILLABLE_POST_PATHS) → env.effectiveCommitMode
+ *     ("live" only when LOB_LIVE_API_KEY AND LOB_LIVE_MODE=true).
+ *   • Everything else (lists, gets, cancels, deletes, non-billable creates,
+ *     verifications) → env.effectiveReadMode ("live" whenever LOB_LIVE_API_KEY
+ *     is configured, unless LOB_READS_USE_TEST=true). Reads have no billing
+ *     risk and "how many letters last week?" is almost always about live data.
  *
  * Previews always pass `keyMode: "test"` so the proof endpoint runs against the
- * test key regardless of whether live mode is enabled.
+ * test key regardless of either mode.
  *
  * Asserts at runtime that any POST to a billable create path carries an
  * Idempotency-Key. This is a programmer-error guard for the preview/commit
@@ -28,7 +34,7 @@ export interface RequestOptions {
   lobVersion?: string | undefined;
   /**
    * test = use test key. live = use live key when configured (else falls back to test).
-   * Default: env.effectiveMode.
+   * Default: env.effectiveCommitMode for billable POSTs; env.effectiveReadMode otherwise.
    */
   keyMode?: "test" | "live";
 }
@@ -58,18 +64,21 @@ export class LobClient {
   }
 
   async request<T = unknown>(opts: RequestOptions): Promise<T> {
-    if (
+    const isBillablePost =
       opts.method === "POST" &&
-      BILLABLE_POST_PATHS.some((rx) => rx.test(opts.path)) &&
-      !opts.idempotencyKey
-    ) {
+      BILLABLE_POST_PATHS.some((rx) => rx.test(opts.path));
+
+    if (isBillablePost && !opts.idempotencyKey) {
       throw new Error(
         `Idempotency-Key required for POST ${opts.path}. This is a programmer bug — every billable ` +
           "create path must pass an idempotency key (use buildPreviewCommit or pass explicitly).",
       );
     }
 
-    const requestedMode = opts.keyMode ?? this.env.effectiveMode;
+    const defaultMode = isBillablePost
+      ? this.env.effectiveCommitMode
+      : this.env.effectiveReadMode;
+    const requestedMode = opts.keyMode ?? defaultMode;
     const auth =
       requestedMode === "live" && this.liveAuth ? this.liveAuth : this.testAuth;
 

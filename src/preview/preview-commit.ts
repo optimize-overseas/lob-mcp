@@ -95,7 +95,7 @@ export function buildPreviewCommit<TShape extends ZodRawShape>(opts: {
       const payload = stripUndefined(rest);
 
       const requireToken =
-        ctx.env.requireConfirmation && ctx.env.effectiveMode === "live";
+        ctx.env.requireConfirmation && ctx.env.effectiveCommitMode === "live";
 
       let consumedToken: string | undefined;
       if (confirmationToken) {
