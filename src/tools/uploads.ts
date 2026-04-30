@@ -112,7 +112,9 @@ export function registerUploadsTools(
   registerTool(server, {
     name: "lob_buckslips_list",
     annotations: { title: "List buckslips", ...ToolAnnotationPresets.read },
-    description: "List buckslip inventory on your account.",
+    description:
+      "List buckslip inventory on your account. **For 'how many buckslips?' counts, pass " +
+      "`include: ['total_count']` with `limit: 1`.** Filter by `date_created` or `metadata`.",
     inputSchema: { ...listParamsSchema.shape },
     handler: async (args) =>
       lob.request({ method: "GET", path: "/buckslips", query: compact(args) }),
@@ -200,7 +202,10 @@ export function registerUploadsTools(
   registerTool(server, {
     name: "lob_buckslip_orders_list",
     annotations: { title: "List buckslip orders", ...ToolAnnotationPresets.read },
-    description: "List orders for a specific buckslip.",
+    description:
+      "List orders for a specific buckslip. Note: this nested endpoint does NOT accept " +
+      "`include: ['total_count']` — counting requires walking pages, or read aggregate fields " +
+      "(`quantity_ordered`, `quantity_remaining`) off the parent via `lob_buckslips_get`.",
     inputSchema: { buckslip_id: BUCKSLIP_ID, ...listParamsSchema.shape },
     handler: async (args) => {
       const { buckslip_id, ...query } = args;
@@ -241,7 +246,9 @@ export function registerUploadsTools(
   registerTool(server, {
     name: "lob_cards_list",
     annotations: { title: "List cards", ...ToolAnnotationPresets.read },
-    description: "List cards on your account.",
+    description:
+      "List card inventory on your account. **For 'how many cards?' counts, pass " +
+      "`include: ['total_count']` with `limit: 1`.** Filter by `date_created` or `metadata`.",
     inputSchema: { ...listParamsSchema.shape },
     handler: async (args) =>
       lob.request({ method: "GET", path: "/cards", query: compact(args) }),
@@ -325,7 +332,10 @@ export function registerUploadsTools(
   registerTool(server, {
     name: "lob_card_orders_list",
     annotations: { title: "List card orders", ...ToolAnnotationPresets.read },
-    description: "List orders for a specific card.",
+    description:
+      "List orders for a specific card. Note: this nested endpoint does NOT accept " +
+      "`include: ['total_count']` — counting requires walking pages, or read aggregate fields " +
+      "off the parent via `lob_cards_get`.",
     inputSchema: { card_id: CARD_ID, ...listParamsSchema.shape },
     handler: async (args) => {
       const { card_id, ...query } = args;
@@ -346,7 +356,10 @@ export function registerUploadsTools(
       ...ToolAnnotationPresets.read,
     },
     description:
-      "List QR code scans / analytics events for QR codes embedded in your mail pieces.",
+      "List QR-code scan / analytics events for QR codes embedded in your mail pieces. " +
+      "**For 'how many scans?' counts, pass `include: ['total_count']` with `limit: 1`.** " +
+      "Filter by `date_scanned` (e.g. `{ gt: '<iso>' }` for 'last N days'), `resource_id` " +
+      "(scans tied to a specific mail piece), or `campaign_id` (scans for a whole campaign).",
     inputSchema: {
       ...listParamsSchema.shape,
       resource_id: z

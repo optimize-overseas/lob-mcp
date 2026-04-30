@@ -47,7 +47,9 @@ export function registerWebhookTools(server: McpServer, lob: LobClient): void {
   registerTool(server, {
     name: "lob_webhooks_list",
     annotations: { title: "List webhooks", ...ToolAnnotationPresets.read },
-    description: "List webhook subscriptions on your account.",
+    description:
+      "List webhook subscriptions on your account. Note: Lob's `/webhooks` does NOT support " +
+      "`include: ['total_count']` — for a count, just inspect `data.length` (webhook lists are small).",
     inputSchema: { ...listParamsSchema.shape },
     handler: async (args) =>
       lob.request({ method: "GET", path: "/webhooks", query: compact(args) }),

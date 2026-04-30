@@ -118,7 +118,10 @@ export function registerPostcardTools(
     name: "lob_postcards_list",
     annotations: { title: "List postcards", ...ToolAnnotationPresets.read },
     description:
-      "List postcards on your Lob account, with cursor pagination and filtering.",
+      "List postcards on your Lob account. **For 'how many postcards?' counts, pass " +
+      "`include: ['total_count']` with `limit: 1`** — never paginate to count. " +
+      "Filter by `date_created` (e.g. `{ gt: '<iso>' }` for 'last N days'), `send_date`, " +
+      "`size`, `mail_type`, `scheduled`, or `metadata`. Default sort is most-recent first.",
     inputSchema: {
       ...listParamsSchema.shape,
       size: POSTCARD_SIZE.optional(),

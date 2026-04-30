@@ -78,7 +78,9 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
     description:
       "List templates on your Lob account. By default returns slim records (no HTML body) — " +
       "Lob template HTML can be many MB per entry and quickly overwhelms LLM context. Pass " +
-      "`include_html: true` to get the full HTML, or use `lob_templates_get(id)` for a single template.",
+      "`include_html: true` to get the full HTML, or use `lob_templates_get(id)` for a single template. " +
+      "**For 'how many templates?' counts, pass `include: ['total_count']` with `limit: 1`.** " +
+      "To find a template by name or metadata, use `lob_templates_search`.",
     inputSchema: { ...listParamsSchema.shape, include_html: includeHtmlSchema },
     handler: async (args) => {
       const { include_html, ...rest } = args;
@@ -271,7 +273,8 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
     annotations: { title: "List template versions", ...ToolAnnotationPresets.read },
     description:
       "List all versions of a template. Slim by default (no HTML); pass `include_html: true` " +
-      "to get the full HTML body of each version, or use `lob_template_versions_get(template_id, version_id)`.",
+      "to get the full HTML body of each version, or use `lob_template_versions_get(template_id, version_id)`. " +
+      "**For 'how many versions?' counts, pass `include: ['total_count']` with `limit: 1`.**",
     inputSchema: {
       template_id: TEMPLATE_ID,
       ...listParamsSchema.shape,

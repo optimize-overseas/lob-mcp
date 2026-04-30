@@ -44,7 +44,10 @@ export function registerAddressBookTools(server: McpServer, lob: LobClient): voi
   registerTool(server, {
     name: "lob_addresses_list",
     annotations: { title: "List address book entries", ...ToolAnnotationPresets.read },
-    description: "List addresses stored in your Lob address book. Supports cursor pagination.",
+    description:
+      "List addresses stored in your Lob address book. **For 'how many addresses?' counts, " +
+      "pass `include: ['total_count']` with `limit: 1`.** Filter by `date_created` " +
+      "(e.g. `{ gt: '<iso>' }` for recently-added) or `metadata`.",
     inputSchema: { ...listParamsSchema.shape },
     handler: async (args) =>
       lob.request({ method: "GET", path: "/addresses", query: compact(args) }),

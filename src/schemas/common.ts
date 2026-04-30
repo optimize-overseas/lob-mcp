@@ -77,7 +77,10 @@ export const generateIdempotencyKey = (): string => randomUUID();
 /** Lob date-range filter shape: { gt, gte, lt, lte } each an ISO 8601 timestamp. */
 export const dateFilterSchema = z
   .record(z.string())
-  .describe("ISO8601 date filter object with gt/gte/lt/lte keys, e.g. { gt: '2026-01-01' }.");
+  .describe(
+    "ISO8601 date filter object with gt/gte/lt/lte keys, e.g. { gt: '2026-04-23T00:00:00Z' } " +
+      "for 'last 7 days'. Combine with include:['total_count'] and limit:1 for date-bounded counts.",
+  );
 
 export const listParamsSchema = z
   .object({
@@ -93,7 +96,11 @@ export const listParamsSchema = z
     include: z
       .array(z.string())
       .optional()
-      .describe("Fields to include in the response, e.g. ['total_count']."),
+      .describe(
+        "Response add-ons. Pass ['total_count'] alongside any filters and limit:1 to answer 'how many?' " +
+          "questions in a single call — far cheaper than paginating to count. " +
+          "Not accepted on nested order endpoints (buckslip/card orders) or /webhooks.",
+      ),
     date_created: dateFilterSchema.optional(),
     metadata: z
       .record(z.string())

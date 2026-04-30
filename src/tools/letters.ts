@@ -151,7 +151,10 @@ export function registerLetterTools(
     name: "lob_letters_list",
     annotations: { title: "List letters", ...ToolAnnotationPresets.read },
     description:
-      "List letters on your Lob account, with cursor pagination and filtering.",
+      "List letters on your Lob account. **For 'how many letters?' counts, pass " +
+      "`include: ['total_count']` with `limit: 1`** — never paginate to count. " +
+      "Filter by `date_created` (e.g. `{ gt: '<iso>' }` for 'last N days'), `send_date`, " +
+      "`mail_type`, `color`, `scheduled`, or `metadata`. Default sort is most-recent first.",
     inputSchema: {
       ...listParamsSchema.shape,
       mail_type: mailTypeSchema,
