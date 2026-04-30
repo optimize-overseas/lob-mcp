@@ -10,11 +10,42 @@ Distributed on npm as [`lob-mcp`](https://www.npmjs.com/package/lob-mcp); runs a
 
 ## Public-repository discipline
 
-This repository and the npm package are public. When editing or opening PRs:
+**This rule is permanent and non-negotiable.** This repository, the npm package, the GitHub release page, and the git history are all public. The codebase must be completely generic and applicable to any Lob user — exposing nothing about who maintains or uses it, what use cases it gets pointed at, or what specific Lob resources live in any private account.
 
-- No business names, customer data, deployment-specific references, or internal tooling names in code, docs, examples, tests, tool descriptions, or error messages. Keep everything use-case-agnostic.
-- Generic placeholders only in examples ("Acme Co", "123 Example St").
-- No secrets — API keys, credentials, internal URLs, or live Lob test data must never land in git.
+**Scope — applies to every public surface, not just code:**
+
+- Source files (`src/`), build output (`build/`), schemas, tool descriptions, error messages, log lines, banner text.
+- Docs: `README.md`, `CHANGELOG.md`, `CLAUDE.md`, anything under `docs/`.
+- Tests that ship in the repo (currently `tests/` is gitignored, but if any test ever becomes tracked it falls under this rule).
+- Examples in any of the above.
+- Git metadata: **commit messages, tag messages, GitHub release notes, PR descriptions, issue titles/bodies**. These are public artifacts of the repo.
+- npm metadata: `package.json` `description` / `keywords` / `author`, the published tarball.
+
+**Forbidden content:**
+
+- Business or customer names (real or thinly anonymized).
+- Specific use-case framing (industries, workflows, campaigns, vertical references).
+- Real Lob resource identifiers from any private account: `tmpl_…`, `adr_…`, `bnk_…`, `cmp_…`, `crv_…`, `psc_…`, `ltr_…`, `chk_…`, `bck_…`, `crd_…`, `vrf_…`, `ep_…`, `whk_…`, etc. **Even in a "the live verification used X" sentence in a commit message.** Use generic placeholders instead.
+- Real template descriptions / campaign names / metadata values from any private account, even if they sound innocuous.
+- Account-specific quantities, prices, or volumes that imply who the account belongs to.
+- Personal identifiers: maintainer email beyond the `package.json` author block, anyone's name, addresses other than Lob's HQ at 210 King St used as an explicit placeholder.
+- Secrets: any API key, credential, internal URL, or live Lob test data.
+
+**Generic placeholders to use instead:** "Welcome Letter" / "Marketing Postcard" for template names, "Acme Co" / "Example LLC" for senders, "123 Example St" / Lob's published HQ for addresses, `tmpl_xxxxxxxxxxxxxxx` for IDs.
+
+**Pre-push / pre-publish audit (run before every commit you intend to push and every release):**
+
+```bash
+# Substitute the words/IDs you've recently typed or pasted into work-in-progress
+# files, commit messages, or release notes:
+git grep -niE 'PATTERN1|PATTERN2|tmpl_[a-f0-9]{15,}'
+git log -1 --format=%B | grep -iE 'PATTERN1|PATTERN2|tmpl_[a-f0-9]{15,}'
+gh release view vX.Y.Z --json body -q .body | grep -iE 'PATTERN1|PATTERN2'
+```
+
+If the audit finds anything, fix it BEFORE pushing. If it lands on `main`, the only correct response is to scrub it (rewriting commit message via `git commit --amend` + force-push to `main` with explicit user approval; editing release notes via `gh release edit`).
+
+**When generating any of: commit messages, tag messages, GitHub release notes** — describe the change in terms a stranger could understand without any reference to the verifying account. *"Live verification confirmed the new behavior on a busy account"* is fine; *"live verification found `<real-template-name>` at `tmpl_<real-id>`"* is not. Even forbidden examples in this very file should be hypothetical (`<placeholder>`), not the actual identifier you saw.
 
 ## Commands
 
