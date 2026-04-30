@@ -168,7 +168,11 @@ export function registerCheckTools(
   registerTool(server, {
     name: "lob_checks_list",
     annotations: { title: "List checks", ...ToolAnnotationPresets.read },
-    description: "List checks on your Lob account.",
+    description:
+      "List checks on your Lob account. **For 'how many checks?' counts, pass " +
+      "`include: ['total_count']` with `limit: 1`** — never paginate to count. " +
+      "Filter by `date_created` (e.g. `{ gt: '<iso>' }` for 'last N days'), `send_date`, " +
+      "`scheduled`, or `metadata`. Default sort is most-recent first.",
     inputSchema: {
       ...listParamsSchema.shape,
       scheduled: z.boolean().optional(),

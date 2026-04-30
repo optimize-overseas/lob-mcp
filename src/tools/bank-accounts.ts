@@ -48,7 +48,9 @@ export function registerBankAccountTools(server: McpServer, lob: LobClient): voi
   registerTool(server, {
     name: "lob_bank_accounts_list",
     annotations: { title: "List bank accounts", ...ToolAnnotationPresets.read },
-    description: "List bank accounts on your Lob account.",
+    description:
+      "List bank accounts on your Lob account. **For 'how many bank accounts?' counts, pass " +
+      "`include: ['total_count']` with `limit: 1`.**",
     inputSchema: { ...listParamsSchema.shape },
     handler: async (args) =>
       lob.request({ method: "GET", path: "/bank_accounts", query: compact(args) }),

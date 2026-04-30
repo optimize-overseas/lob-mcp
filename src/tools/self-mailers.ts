@@ -121,7 +121,11 @@ export function registerSelfMailerTools(
   registerTool(server, {
     name: "lob_self_mailers_list",
     annotations: { title: "List self-mailers", ...ToolAnnotationPresets.read },
-    description: "List self-mailers on your Lob account.",
+    description:
+      "List self-mailers on your Lob account. **For 'how many?' counts, pass " +
+      "`include: ['total_count']` with `limit: 1`** — never paginate to count. " +
+      "Filter by `date_created` (e.g. `{ gt: '<iso>' }` for 'last N days'), `size`, " +
+      "`mail_type`, `scheduled`, or `metadata`. Default sort is most-recent first.",
     inputSchema: {
       ...listParamsSchema.shape,
       size: SELF_MAILER_SIZE.optional(),

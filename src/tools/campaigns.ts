@@ -63,7 +63,9 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
   registerTool(server, {
     name: "lob_campaigns_list",
     annotations: { title: "List campaigns", ...ToolAnnotationPresets.read },
-    description: "List campaigns on your Lob account.",
+    description:
+      "List campaigns on your Lob account. **For 'how many campaigns?' counts, pass " +
+      "`include: ['total_count']` with `limit: 1`.** Filter by `date_created` or `metadata`.",
     inputSchema: { ...listParamsSchema.shape },
     handler: async (args) =>
       lob.request({ method: "GET", path: "/campaigns", query: compact(args) }),
