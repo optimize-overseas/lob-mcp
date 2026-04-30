@@ -46,10 +46,14 @@ async function main(): Promise<void> {
         "(buckslips, cards), call `lob_<resource>_preview` first. The response includes a " +
         "`confirmation_token` and (for postcards/letters/self-mailers) a real Lob proof PDF URL.\n" +
         "• Then call `lob_<resource>_create` with the same payload plus `confirmation_token`. " +
-        "In live mode the token is required; in test mode it is optional.\n\n" +
+        "In live commit mode the token is required; in test mode it is optional.\n\n" +
         "SAFETY:\n" +
-        "• Default mode is TEST. To enable real mail and charges, set BOTH `LOB_LIVE_API_KEY` AND " +
-        "`LOB_LIVE_MODE=true` in the server environment.\n" +
+        "• Two modes route operations to the right key: COMMIT mode gates billable mail-piece sends " +
+        "and inventory orders; READ mode covers everything else (lists, gets, searches, cancels, " +
+        "non-billable creates). Commit mode is TEST unless BOTH `LOB_LIVE_API_KEY` AND `LOB_LIVE_MODE=true` " +
+        "are set. Read mode is LIVE whenever `LOB_LIVE_API_KEY` is configured (set `LOB_READS_USE_TEST=true` " +
+        "to opt out). Reads have no billing risk — analytics like 'how many letters last week?' should " +
+        "see live data.\n" +
         "• `LOB_MAX_PIECES_PER_RUN` caps total pieces this process may create. Resets on restart.\n" +
         "• Address fields are PII — avoid echoing them unnecessarily into chat history.",
     },
@@ -63,15 +67,29 @@ async function main(): Promise<void> {
 }
 
 function printBanner(env: LobEnv): void {
-  const live = env.effectiveMode === "live";
+  const liveCommits = env.effectiveCommitMode === "live";
+  const liveReads = env.effectiveReadMode === "live";
   console.error(
-    live
-      ? "[lob-mcp] LIVE mode — REAL physical mail and REAL charges will occur for billable commits."
-      : "[lob-mcp] TEST mode — no real mail, no charges.",
+    `[lob-mcp] commits: ${
+      liveCommits
+        ? "LIVE — REAL physical mail and REAL charges for billable creates"
+        : "TEST — no real mail, no charges"
+    }`,
   );
-  if (env.liveApiKey && !env.liveModeEnabled) {
+  console.error(
+    `[lob-mcp] reads:   ${
+      liveReads
+        ? "LIVE — list/get/search query the real account"
+        : "TEST — list/get/search query the test account"
+    }`,
+  );
+  if (env.liveApiKey && env.effectiveReadMode === "test") {
     console.error(
-      "[lob-mcp]   ⚠ Live API key configured but LOB_LIVE_MODE != true — live key is dormant.",
+      "[lob-mcp]   ℹ LOB_READS_USE_TEST=true — reads forced to test key despite live key being configured.",
+    );
+  } else if (env.liveApiKey && !env.liveModeEnabled) {
+    console.error(
+      "[lob-mcp]   ℹ Live key configured, LOB_LIVE_MODE != true — commits stay test, reads use live.",
     );
   }
   console.error("[lob-mcp] safety state:");

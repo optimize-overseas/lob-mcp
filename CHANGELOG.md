@@ -1,5 +1,79 @@
 # Changelog
 
+## 1.3.0 — 2026-04-30 (Read/commit key split + count-idiom hints)
+
+Two unrelated UX bugs surfaced from the same chat-bot session:
+
+1. **Asking "how many letters last week?" stalled the bot.** The list-tool
+   descriptions did not point the model at `include: ['total_count']`, so it
+   tried to paginate to count — on a 144 K-letter week that's ~1,440 pages,
+   minutes of wall time, and an exhausted context window.
+2. **Even when the count came back, it was the wrong account.** Reads were
+   gated by `LOB_LIVE_MODE` alongside billable commits, so the cautious-default
+   config (live key set, `LOB_LIVE_MODE` unset) returned test-account noise
+   for every analytics question.
+
+### Changed (read vs. commit key split)
+
+- **`LobEnv.effectiveMode` is removed.** Replaced by two independent fields:
+  - `effectiveCommitMode` — `"live"` only when both `LOB_LIVE_API_KEY` AND
+    `LOB_LIVE_MODE=true` are set. Same gate as before; the safety contract on
+    billable mail-piece sends and inventory orders is **unchanged**.
+  - `effectiveReadMode` — `"live"` whenever `LOB_LIVE_API_KEY` is configured,
+    regardless of `LOB_LIVE_MODE`. Reads have no billing risk and analytics
+    questions are about real-account data.
+- **`LobClient.request()` picks the default key by operation kind**, not by a
+  global toggle. POSTs to billable paths (`/postcards`, `/letters`,
+  `/self_mailers`, `/checks`, `/buckslips/{id}/orders`, `/cards/{id}/orders`)
+  default to `effectiveCommitMode`; everything else defaults to
+  `effectiveReadMode`. Explicit `keyMode: "test" | "live"` overrides still win
+  (previews keep their explicit `keyMode: "test"`).
+- **New escape hatch `LOB_READS_USE_TEST=true`** forces reads back onto the
+  test key for users who want test responses despite a live key being mounted
+  (uncommon — relevant for dev environments).
+- **Boot banner now prints two lines** — one per mode — and surfaces an info
+  message when commits and reads are split (the new typical config).
+- **Wizard prompt clarified**: "Enable LIVE COMMITS now?" instead of "Enable
+  live mode now?" The label tracks what the toggle actually controls.
+
+### Changed (description hints for analytical questions)
+
+- Every list-tool description now leads with the count idiom: pass
+  `include: ['total_count']` with `limit: 1` to answer "how many?" in one call
+  instead of paginating. Filter lists are enumerated inline. Three endpoints
+  that don't support `include[]=total_count` (`/webhooks`,
+  `/buckslips/{id}/orders`, `/cards/{id}/orders`) get an honest "not supported"
+  caveat verified against Lob's live API.
+- `listParamsSchema.include` and `dateFilterSchema` descriptions reinforce the
+  same pattern at the parameter level.
+
+### Tests
+
+- **+14 unit tests** — env split (5 new in `env.test.ts`), method-based key
+  routing (12 new in `idempotency.test.ts` covering: GET → live, billable POST
+  → test, non-billable mutate POST → live, DELETE → live, PATCH → live,
+  verifications POST → live, explicit `keyMode: "test"` override, the
+  `LOB_READS_USE_TEST` opt-out, full-live mode parity).
+- Total unit suite: 183 → 197.
+- Integration smoke (22/22) and stdio smoke (78 tools, 23 resources)
+  unchanged and passing.
+
+### Migration
+
+- **Most users: nothing to do.** Test-only deployments and full-live
+  (`LOB_LIVE_MODE=true`) deployments behave identically.
+- **Live key configured without `LOB_LIVE_MODE`**: read tools now query the
+  live account. This is almost certainly what you wanted (you set a live key);
+  it removes the "why am I getting test-account counts?" footgun. To preserve
+  the prior behavior, set `LOB_READS_USE_TEST=true`.
+- Internal callers of `env.effectiveMode` need to switch to `effectiveCommitMode`
+  (for billing-gated logic) or `effectiveReadMode` (for read-side logic).
+
+### Internal
+
+- `src/version.ts` SERVER_VERSION is bumped to `1.3.0` (was stale at `1.1.0`
+  in the 1.2 release — bumped now to match `package.json`).
+
 ## 1.2.0 — 2026-04-30 (Templates payload + timeout release)
 
 A real-world MCP timeout was traced to `lob_templates_list` returning the full

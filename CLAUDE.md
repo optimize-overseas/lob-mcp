@@ -53,7 +53,7 @@ If the audit finds anything, fix it BEFORE pushing. If it lands on `main`, the o
 npm install                              # install deps
 npm run typecheck                        # tsc --noEmit (must stay clean)
 npm run build                            # tsc + chmod entry + copy specs/pdfs/ → build/specs/pdfs/
-npm test                                 # node:test unit suite (~183 tests across 20 suites)
+npm test                                 # node:test unit suite (~197 tests across 21 suites)
 npm run inspector                        # MCP Inspector for interactive smoke testing
 npm start                                # run the server directly (needs LOB_TEST_API_KEY)
 node tests/integration.mjs               # live integration smoke against Lob's test API (22 checks)
@@ -135,7 +135,7 @@ scripts/
 - **Adding a new (mail_type, variant) spec** = (1) add a `DesignSpec` entry to `SPEC_MANIFEST` in `src/specs/manifest.ts`, (2) drop the matching PDF in `specs/pdfs/{mail_type}-{variant}.pdf` (use `pdfFilenameFor` helper to compute the filename — dots in the variant become underscores), (3) `npm run build` to copy into `build/specs/pdfs/`, (4) integration smoke covers the rest automatically.
 - **Annotations come from `ToolAnnotationPresets`** in `tools/helpers.ts`. Use `read`, `preview`, `commit`, `destructive`, or `mutate` — don't write `readOnlyHint`/`destructiveHint` by hand. Keeps the matrix consistent.
 - **Idempotency assertion in `LobClient.request()`** trips on every POST to a billable path that lacks an `Idempotency-Key`. If you ever see this fire, the bug is in the caller — fix the caller, don't relax the assertion.
-- **Previews always pass `keyMode: "test"`** to LobClient. Commits inherit `env.effectiveMode` (live when `LOB_LIVE_MODE=true` AND a live key is configured; else test).
+- **`LobClient` picks the default key by operation kind, not by a global toggle.** Billable POSTs (anything matching `BILLABLE_POST_PATHS` in `src/lob/client.ts`) default to `env.effectiveCommitMode` (live only when `LOB_LIVE_MODE=true` AND a live key is configured). Everything else — lists, gets, searches, cancels, deletes, non-billable creates/updates, verifications — defaults to `env.effectiveReadMode` (live whenever a live key is configured, unless `LOB_READS_USE_TEST=true`). The split exists because reads have no billing risk and analytics want live data; commits do have billing risk and need an explicit gate. Previews keep their explicit `keyMode: "test"` override regardless of either mode.
 - **MCP resource URIs use slashes; on-disk filenames use hyphens.** `lob://specs/letter/legal_8.5x14.pdf` ↔ `build/specs/pdfs/letter-legal_8_5x14.pdf` (slash → hyphen, dot → underscore). The conversion lives in `pdfFilenameFor()` in `src/specs/pdf-loader.ts`.
 - **Token store cleanup is on a 60s interval, `unref()`'d** so it doesn't pin the process. Tests don't wait on it; they call `cleanup()` directly.
 - **Every tool uses `registerTool()`** which catches all handler errors via `formatErrorForTool` and returns `{isError:true, content:[…]}` — errors never escape to the JSON-RPC transport.
