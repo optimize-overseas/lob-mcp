@@ -53,7 +53,7 @@ If the audit finds anything, fix it BEFORE pushing. If it lands on `main`, the o
 npm install                              # install deps
 npm run typecheck                        # tsc --noEmit (must stay clean)
 npm run build                            # tsc + chmod entry + copy specs/pdfs/ → build/specs/pdfs/
-npm test                                 # node:test unit suite (~136 tests across 12 suites)
+npm test                                 # node:test unit suite (~183 tests across 20 suites)
 npm run inspector                        # MCP Inspector for interactive smoke testing
 npm start                                # run the server directly (needs LOB_TEST_API_KEY)
 node tests/integration.mjs               # live integration smoke against Lob's test API (22 checks)
@@ -145,6 +145,7 @@ scripts/
 - **Every Lob fetch has a per-request timeout** (`LobClient.request` wires an `AbortController` + `setTimeout`, default `LOB_REQUEST_TIMEOUT_MS=30000`). A timeout surfaces as `LobTimeoutError`, formatted with the path and configured ms so the consumer can raise the budget. Each request gets its own controller — never share signals across calls.
 - **`lob_templates_list` and `lob_template_versions_list` are slim by default.** They strip `published_version.html` and drop `versions[]` (replaced with `version_count`). Lob template HTML can be megabytes; on busy accounts the list response can hit 70+ MB raw. Use `include_html: true` for the full body, or `lob_templates_get(id)` for a single record. The list-size guard in `tools/templates.ts` (`MAX_LIST_RESPONSE_BYTES = 1.5 MB`) is a last-line defense — if you see it fire, slim further or narrow with `lob_templates_search`.
 - **`lob_templates_search`** walks `/templates` server-side with optional metadata filter, then matches `description_contains` client-side (case-insensitive). Returns slim records. Default caps: `limit=20`, `max_pages=5` (page size 100 → up to 500 templates inspected). Use this whenever the LLM has a template name but not a `tmpl_…` id.
+- **Tests live at `tests/unit/*.test.ts`** — `node:test` + `tsx`, no jest/vitest. The `tests/` tree is gitignored (so new test files won't appear in `git status` and aren't shipped in the npm tarball; that's the project's chosen pattern). HTTP-touching tests stub `globalThis.fetch` and restore in `afterEach` — see `tests/unit/idempotency.test.ts` and `tests/unit/timeout.test.ts` for the canonical shape (capture/replace pattern, AbortSignal-honoring delay stubs). Tool wire-up tests build a fake `McpServer` with a `registerTool: (name, _config, handler) => tools.set(name, handler)` shim and invoke the captured handler directly — see `tests/unit/templates-tools.test.ts`.
 
 ## Lob endpoint quirks worth remembering
 
