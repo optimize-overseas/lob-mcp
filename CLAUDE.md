@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`lob-mcp` is an MCP (Model Context Protocol) server that wraps the [Lob.com](https://lob.com) API, exposing **77 tools + 23 design-spec resources across 12 resource groups** — address verification, address book CRUD, mail-piece preview/create/lifecycle (postcards, letters, self-mailers, checks), templates + template versions, campaigns + creatives, buckslips/cards + print orders, QR-code analytics, resource proofs, bank accounts, webhook subscriptions, and design specifications.
+`lob-mcp` is an MCP (Model Context Protocol) server that wraps the [Lob.com](https://lob.com) API, exposing **78 tools + 23 design-spec resources across 12 resource groups** — address verification, address book CRUD, mail-piece preview/create/lifecycle (postcards, letters, self-mailers, checks), templates + template versions + template search, campaigns + creatives, buckslips/cards + print orders, QR-code analytics, resource proofs, bank accounts, webhook subscriptions, and design specifications.
 
 Distributed on npm as [`lob-mcp`](https://www.npmjs.com/package/lob-mcp); runs as a local stdio server via `npx lob-mcp`. The package and repo are public.
 
@@ -31,7 +31,7 @@ node scripts/download-spec-pdfs.mjs      # one-shot refresh: pull Lob's template
 # Run a single test suite
 node --test --import tsx tests/unit/specs-manifest.test.ts
 
-# stdio smoke — initialize + tools/list (must return 77)
+# stdio smoke — initialize + tools/list (must return 78)
 printf '%s\n' \
   '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1.0"}}}' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
@@ -50,7 +50,7 @@ printf '%s\n' \
 npm publish                              # publish to npm (unscoped — no --access flag needed)
 ```
 
-Verification before merge: clean typecheck + clean build + `npm test` clean + smoke reports 77 tools + 23 resources + `tests/integration.mjs` passes 22/22 + Inspector sanity check on the affected tool group.
+Verification before merge: clean typecheck + clean build + `npm test` clean + smoke reports 78 tools + 23 resources + `tests/integration.mjs` passes 22/22 + Inspector sanity check on the affected tool group.
 
 ## Architecture
 
@@ -111,6 +111,9 @@ scripts/
 - **Every create/update tool has an `extra` escape hatch** (`extraParamsSchema`) that lets callers pass any Lob parameter not enumerated in the zod schema.
 - **stderr-only logging.** `stdout` is the JSON-RPC transport — `console.log` will corrupt the protocol. All banners and errors go through `console.error`.
 - **PII redaction is recursive.** `redactPii()` walks objects and scrubs `to`, `from`, `name`, `email`, `address_*`, `primary_line`, etc. before any error output crosses the MCP transport.
+- **Every Lob fetch has a per-request timeout** (`LobClient.request` wires an `AbortController` + `setTimeout`, default `LOB_REQUEST_TIMEOUT_MS=30000`). A timeout surfaces as `LobTimeoutError`, formatted with the path and configured ms so the consumer can raise the budget. Each request gets its own controller — never share signals across calls.
+- **`lob_templates_list` and `lob_template_versions_list` are slim by default.** They strip `published_version.html` and drop `versions[]` (replaced with `version_count`). Lob template HTML can be megabytes; on busy accounts the list response can hit 70+ MB raw. Use `include_html: true` for the full body, or `lob_templates_get(id)` for a single record. The list-size guard in `tools/templates.ts` (`MAX_LIST_RESPONSE_BYTES = 1.5 MB`) is a last-line defense — if you see it fire, slim further or narrow with `lob_templates_search`.
+- **`lob_templates_search`** walks `/templates` server-side with optional metadata filter, then matches `description_contains` client-side (case-insensitive). Returns slim records. Default caps: `limit=20`, `max_pages=5` (page size 100 → up to 500 templates inspected). Use this whenever the LLM has a template name but not a `tmpl_…` id.
 
 ## Lob endpoint quirks worth remembering
 
