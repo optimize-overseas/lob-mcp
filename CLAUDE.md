@@ -36,11 +36,13 @@ Distributed on npm as [`lob-mcp`](https://www.npmjs.com/package/lob-mcp); runs a
 **Pre-push / pre-publish audit (run before every commit you intend to push and every release):**
 
 ```bash
-# Substitute the words/IDs you've recently typed or pasted into work-in-progress
-# files, commit messages, or release notes:
-git grep -niE 'PATTERN1|PATTERN2|tmpl_[a-f0-9]{15,}'
-git log -1 --format=%B | grep -iE 'PATTERN1|PATTERN2|tmpl_[a-f0-9]{15,}'
-gh release view vX.Y.Z --json body -q .body | grep -iE 'PATTERN1|PATTERN2'
+# Substitute the words/IDs you've recently typed or pasted. Common categories
+# to grep for: business name, customer name, industry/vertical reference,
+# any specific Lob resource ID you saw during verification, any sender name
+# from a real account.
+git grep -niE '<business-name>|<customer-name>|<industry>|tmpl_[a-f0-9]{15,}|adr_[a-f0-9]{15,}|cmp_[a-f0-9]{15,}'
+git log -1 --format=%B | grep -iE '<business-name>|<customer-name>|<industry>'
+gh release view vX.Y.Z --json body -q .body | grep -iE '<business-name>|<customer-name>|<industry>'
 ```
 
 If the audit finds anything, fix it BEFORE pushing. If it lands on `main`, the only correct response is to scrub it (rewriting commit message via `git commit --amend` + force-push to `main` with explicit user approval; editing release notes via `gh release edit`).
@@ -90,6 +92,8 @@ Stdio MCP server with three layered subsystems:
 1. **Safety harness (1.0)** — preview/commit token binding, dual-key auth, idempotency assertion, piece-count cap, narrow elicitation. Every billable tool comes in `_preview` + `_create` pairs.
 2. **Design specs (1.1)** — Lob's official mail-piece dimensions, no-print zones, and PDF templates exposed as MCP resources + a fallback tool. Threaded inline into every `*_preview` response so the model has authoritative no-print-zone coordinates when reviewing a Lob proof.
 3. **Tool layer** — one file per Lob resource group, all funneling through a single thin HTTP client.
+
+See `CHANGELOG.md` for the rationale, ship date, and migration notes per release version (1.0 hardening → 1.1 specs → 1.2 templates payload + timeout → 1.3 read/commit key split).
 
 ```
 src/
@@ -146,6 +150,8 @@ scripts/
 - **`lob_templates_list` and `lob_template_versions_list` are slim by default.** They strip `published_version.html` and drop `versions[]` (replaced with `version_count`). Lob template HTML can be megabytes; on busy accounts the list response can hit 70+ MB raw. Use `include_html: true` for the full body, or `lob_templates_get(id)` for a single record. The list-size guard in `tools/templates.ts` (`MAX_LIST_RESPONSE_BYTES = 1.5 MB`) is a last-line defense — if you see it fire, slim further or narrow with `lob_templates_search`.
 - **`lob_templates_search`** walks `/templates` server-side with optional metadata filter, then matches `description_contains` client-side (case-insensitive). Returns slim records. Default caps: `limit=20`, `max_pages=5` (page size 100 → up to 500 templates inspected). Use this whenever the LLM has a template name but not a `tmpl_…` id.
 - **Tests live at `tests/unit/*.test.ts`** — `node:test` + `tsx`, no jest/vitest. The `tests/` tree is gitignored (so new test files won't appear in `git status` and aren't shipped in the npm tarball; that's the project's chosen pattern). HTTP-touching tests stub `globalThis.fetch` and restore in `afterEach` — see `tests/unit/idempotency.test.ts` and `tests/unit/timeout.test.ts` for the canonical shape (capture/replace pattern, AbortSignal-honoring delay stubs). Tool wire-up tests build a fake `McpServer` with a `registerTool: (name, _config, handler) => tools.set(name, handler)` shim and invoke the captured handler directly — see `tests/unit/templates-tools.test.ts`.
+- **`src/version.ts` and `package.json` must move together.** `SERVER_VERSION` is the single source of truth for the MCP `serverInfo.version` and outbound `User-Agent`; `package.json` `version` is the single source of truth for npm. They're independent strings and the codebase does not enforce sync — bump both whenever you tag a release. The 1.2 release shipped with them mismatched (package.json at 1.2.0, `version.ts` stale at 1.1.0); the file comment in `version.ts` says "keep in sync with package.json" but that is honor-system only.
+- **Env-var table lives in `README.md`** under "Configuration". README is the public-facing source of truth for every `LOB_*` variable, default, and behavior. CLAUDE.md mentions specific env vars inline only where they affect editing decisions — when adding a new env var or changing a default, update `README.md` in the same commit.
 
 ## Lob endpoint quirks worth remembering
 
