@@ -1,18 +1,31 @@
 /**
  * Thin fetch-based HTTP client for the Lob.com REST API.
  *
- * Carries TWO Basic-auth headers — one per key. Callers pick which key to use via
- * `keyMode: "test" | "live"`. When the caller does not supply one, the client
- * picks based on the operation kind:
- *   • Billable POST (matches BILLABLE_POST_PATHS) → env.effectiveCommitMode
- *     ("live" only when LOB_LIVE_API_KEY AND LOB_LIVE_MODE=true).
- *   • Everything else (lists, gets, cancels, deletes, non-billable creates,
- *     verifications) → env.effectiveReadMode ("live" whenever LOB_LIVE_API_KEY
- *     is configured, unless LOB_READS_USE_TEST=true). Reads have no billing
- *     risk and "how many letters last week?" is almost always about live data.
+ * Carries TWO Basic-auth headers — one per key. Every request is classified into
+ * exactly one operation kind, which decides both the default key and whether the
+ * call is allowed at all:
+ *   • preview — /resource_proofs (any method). Always the TEST key: proofs are a
+ *     test-account artifact of the preview→commit flow. Never billed, never
+ *     refused.
+ *   • commit — a billable POST (matches BILLABLE_POST_PATHS) → env.effectiveCommitMode
+ *     ("live" only when LOB_LIVE_API_KEY AND LOB_LIVE_MODE=true). In test mode it
+ *     runs against the test account (a $0 test send), so the send flow still works.
+ *   • read — a GET, or a pure-lookup POST (address verification / autocompletion /
+ *     identity — matches READ_LIKE_POST_PATHS). No state change and no physical-mail
+ *     spend (verifications are metered lookups, but carry no live-account or mail
+ *     risk) → env.effectiveReadMode ("live" whenever LOB_LIVE_API_KEY is configured,
+ *     unless LOB_READS_USE_TEST=true), so "how many letters last week?" sees live data.
+ *   • mutation — anything else: a DELETE, a cancel, an update (PATCH/PUT/POST to an
+ *     existing resource) or a non-billable create (templates, campaigns, creatives,
+ *     webhooks, addresses, bank accounts, inventory). These CHANGE account state, so
+ *     they are FAIL-CLOSED: refused before any network call unless LOB_LIVE_MODE is
+ *     enabled. Without this gate a `live_` key present in the environment would let a
+ *     delete/cancel/update reach the LIVE account while the server believed it was in
+ *     test mode. When live mode IS on, mutations route to the live key.
  *
- * Previews always pass `keyMode: "test"` so the proof endpoint runs against the
- * test key regardless of either mode.
+ * An explicit `keyMode` still overrides the chosen KEY, but it does NOT bypass the
+ * mutation gate — the fail-closed refusal is a function of the operation and the
+ * live-mode posture only.
  *
  * Asserts at runtime that any POST to a billable create path carries an
  * Idempotency-Key. This is a programmer-error guard for the preview/commit
@@ -20,7 +33,13 @@
  */
 import { loadEnv, type LobEnv } from "../env.js";
 import { USER_AGENT } from "../version.js";
-import { LobApiError, LobTimeoutError, type LobErrorBody } from "./errors.js";
+import {
+  LobApiError,
+  LobMcpError,
+  LobMcpErrorCodes,
+  LobTimeoutError,
+  type LobErrorBody,
+} from "./errors.js";
 
 export interface RequestOptions {
   method: "GET" | "POST" | "PATCH" | "DELETE" | "PUT";
@@ -39,7 +58,16 @@ export interface RequestOptions {
   keyMode?: "test" | "live";
 }
 
-/** POST paths that always require an Idempotency-Key header. */
+/**
+ * Billable mail-piece / inventory-order POST paths. These always require an
+ * Idempotency-Key and are gated by commit mode (test in test mode = a $0 test send).
+ *
+ * ⚠️ ANY new POST endpoint that SENDS physical mail (or otherwise incurs Lob spend)
+ * MUST be added here. If it is left to the `mutation` default arm instead, it is
+ * fail-closed in test mode (good) but in LIVE mode would route to the live key and
+ * send real mail WITHOUT the idempotency-key assertion, piece cap, or preview→commit
+ * gating — all of which hang off the `commit` class, not `mutation`.
+ */
 const BILLABLE_POST_PATHS: RegExp[] = [
   /^\/postcards\b/,
   /^\/letters\b/,
@@ -48,6 +76,51 @@ const BILLABLE_POST_PATHS: RegExp[] = [
   /^\/buckslips\/[^/]+\/orders\b/,
   /^\/cards\/[^/]+\/orders\b/,
 ];
+
+/**
+ * Proof endpoints. Proofs are produced by the preview step against the TEST key,
+ * so every operation on one (create/get/update) is exercised against the test
+ * account too — regardless of read/commit mode — and is never treated as a
+ * live-account mutation.
+ */
+const PROOF_PATHS: RegExp[] = [/^\/resource_proofs\b/];
+
+/**
+ * POST paths that are pure lookups: they read reference data and do not mutate
+ * the account or bill for physical mail (address verification, autocompletion,
+ * identity validation). Routed like reads, never gated as mutations.
+ */
+const READ_LIKE_POST_PATHS: RegExp[] = [
+  /^\/us_verifications\b/,
+  /^\/intl_verifications\b/,
+  /^\/us_autocompletions\b/,
+  /^\/bulk\/us_verifications\b/,
+  /^\/bulk\/intl_verifications\b/,
+  /^\/identity_validation\b/,
+];
+
+type OperationClass = "preview" | "commit" | "read" | "mutation";
+
+/**
+ * Classify a request into exactly one operation kind from its method + path.
+ *
+ * The default arm is `mutation`: any DELETE / PATCH / PUT, and any POST that is
+ * not a billable send, a proof, or a pure lookup, changes account state. Keeping
+ * mutation the DEFAULT (rather than an allow-list of known-destructive paths)
+ * means a newly added state-changing tool is fail-closed automatically — it
+ * cannot silently fall through to the read key.
+ */
+export function classifyOperation(method: string, path: string): OperationClass {
+  if (PROOF_PATHS.some((rx) => rx.test(path))) return "preview";
+  if (method === "POST" && BILLABLE_POST_PATHS.some((rx) => rx.test(path))) {
+    return "commit";
+  }
+  if (method === "GET") return "read";
+  if (method === "POST" && READ_LIKE_POST_PATHS.some((rx) => rx.test(path))) {
+    return "read";
+  }
+  return "mutation";
+}
 
 export class LobClient {
   readonly env: LobEnv;
@@ -64,20 +137,43 @@ export class LobClient {
   }
 
   async request<T = unknown>(opts: RequestOptions): Promise<T> {
-    const isBillablePost =
-      opts.method === "POST" &&
-      BILLABLE_POST_PATHS.some((rx) => rx.test(opts.path));
+    const opClass = classifyOperation(opts.method, opts.path);
 
-    if (isBillablePost && !opts.idempotencyKey) {
+    if (opClass === "commit" && !opts.idempotencyKey) {
       throw new Error(
         `Idempotency-Key required for POST ${opts.path}. This is a programmer bug — every billable ` +
           "create path must pass an idempotency key (use buildPreviewCommit or pass explicitly).",
       );
     }
 
-    const defaultMode = isBillablePost
-      ? this.env.effectiveCommitMode
-      : this.env.effectiveReadMode;
+    // Fail-closed live-mutation gate: a state-changing operation never reaches
+    // the network unless the server is explicitly in live mode. This runs before
+    // key selection, so an explicit `keyMode` cannot bypass it.
+    if (opClass === "mutation" && !this.env.liveModeEnabled) {
+      throw new LobMcpError(
+        LobMcpErrorCodes.LIVE_MODE_REQUIRED,
+        `Refused: ${opts.method} ${opts.path} changes Lob account state (a delete, cancel, ` +
+          `update, or non-billable create), which is disabled while the server is in test mode.`,
+        "Set LOB_LIVE_MODE=true (with a live_ key) to perform destructive or mutating Lob operations.",
+      );
+    }
+
+    // Key selection. Previews and (test-mode) commits use the test key; reads
+    // follow read mode; a permitted mutation follows commit mode (which is "live"
+    // exactly when live mode is enabled, the only way we reach this arm).
+    let defaultMode: "test" | "live";
+    switch (opClass) {
+      case "preview":
+        defaultMode = "test";
+        break;
+      case "commit":
+      case "mutation":
+        defaultMode = this.env.effectiveCommitMode;
+        break;
+      case "read":
+        defaultMode = this.env.effectiveReadMode;
+        break;
+    }
     const requestedMode = opts.keyMode ?? defaultMode;
     const auth =
       requestedMode === "live" && this.liveAuth ? this.liveAuth : this.testAuth;

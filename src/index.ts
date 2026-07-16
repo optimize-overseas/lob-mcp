@@ -48,11 +48,14 @@ async function main(): Promise<void> {
         "• Then call `lob_<resource>_create` with the same payload plus `confirmation_token`. " +
         "In live commit mode the token is required; in test mode it is optional.\n\n" +
         "SAFETY:\n" +
-        "• Two modes route operations to the right key: COMMIT mode gates billable mail-piece sends " +
-        "and inventory orders; READ mode covers everything else (lists, gets, searches, cancels, " +
-        "non-billable creates). Commit mode is TEST unless BOTH `LOB_LIVE_API_KEY` AND `LOB_LIVE_MODE=true` " +
-        "are set. Read mode is LIVE whenever `LOB_LIVE_API_KEY` is configured (set `LOB_READS_USE_TEST=true` " +
-        "to opt out). Reads have no billing risk — analytics like 'how many letters last week?' should " +
+        "• Each operation is routed by kind: COMMIT (billable mail-piece sends + inventory orders) and " +
+        "MUTATION (deletes, cancels, updates, non-billable creates) are gated by LOB_LIVE_MODE — TEST unless " +
+        "BOTH `LOB_LIVE_API_KEY` AND `LOB_LIVE_MODE=true` are set. A MUTATION is FAIL-CLOSED: in test mode it " +
+        "is refused before any network call, so a live key present in the environment can never change " +
+        "live-account state while LOB_LIVE_MODE is off. READ operations (lists, gets, searches, and pure " +
+        "lookups like address verification) are LIVE whenever `LOB_LIVE_API_KEY` is configured (set " +
+        "`LOB_READS_USE_TEST=true` to opt out) — reads have no state-change or physical-mail risk " +
+        "(verifications are metered lookups), so analytics like 'how many letters last week?' should " +
         "see live data.\n" +
         "• `LOB_MAX_PIECES_PER_RUN` caps total pieces this process may create. Resets on restart.\n" +
         "• Address fields are PII — avoid echoing them unnecessarily into chat history.",
@@ -89,7 +92,8 @@ function printBanner(env: LobEnv): void {
     );
   } else if (env.liveApiKey && !env.liveModeEnabled) {
     console.error(
-      "[lob-mcp]   ℹ Live key configured, LOB_LIVE_MODE != true — commits stay test, reads use live.",
+      "[lob-mcp]   ℹ Live key configured, LOB_LIVE_MODE != true — commits stay test, reads use live, " +
+        "mutations (delete/cancel/update/non-billable create) REFUSED (fail-closed).",
     );
   }
   console.error("[lob-mcp] safety state:");

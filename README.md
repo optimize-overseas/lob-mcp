@@ -73,23 +73,32 @@ The server is configured entirely through environment variables. Run `lob-mcp in
 
 ### Modes
 
-The server has **two independent mode switches**, one for billable commits and one for reads. This separation exists because reads (`how many letters last week?`) want real-account data, but billable commits (`send 10,000 letters`) want a separate explicit opt-in.
+Every request is classified into one of four operation kinds, which decides both the key it uses and whether it is allowed at all. This separation exists because reads (`how many letters last week?`) want real-account data, billable commits (`send 10,000 letters`) want a separate explicit opt-in, and **state-changing mutations must never touch the live account by accident**.
+
+| Kind | Examples | Key / gate |
+|---|---|---|
+| **preview** | `*_preview` (`/resource_proofs`) | Always the **test** key — proofs are a test-account artifact. Never refused. |
+| **commit** | the 6 billable `*_create` (postcards, letters, self-mailers, checks, buckslip/card orders) | `LOB_LIVE_MODE` gate: **test** unless `LOB_LIVE_MODE=true` + a live key. In test mode it runs as a $0 test send. |
+| **read** | lists, gets, searches, and pure lookups (address verification / autocompletion / identity validation) | **live** whenever `LOB_LIVE_API_KEY` is configured (opt out with `LOB_READS_USE_TEST=true`). No state-change or physical-mail risk (address verification is a metered lookup, not mail). |
+| **mutation** | deletes, cancels, updates, and non-billable creates (templates, campaigns, creatives, webhooks, addresses, bank accounts, inventory) | **FAIL-CLOSED**: refused before any network call unless `LOB_LIVE_MODE=true`. When live mode is on, routes to the live key. |
 
 | Variable | Default | Controls | Description |
 |---|---|---|---|
-| `LOB_LIVE_MODE` | `false` | **Commit mode** | Set to `true` to enable real mail and charges for the 6 billable `*_create` tools (postcards, letters, self-mailers, checks, buckslip orders, card orders). Requires `LOB_LIVE_API_KEY`. Without `LOB_LIVE_MODE=true`, billable commits stay on the test key — no real mail, no charges. |
-| `LOB_READS_USE_TEST` | `false` | **Read mode** (opt-out) | When `LOB_LIVE_API_KEY` is configured, **read tools (lists, gets, searches, cancels, non-billable creates, verifications) automatically query the live account** so analytics return real data. Set this to `true` to force reads back onto the test key (uncommon — useful in dev environments where the live key is mounted but you want test responses). |
+| `LOB_LIVE_MODE` | `false` | **Commit + mutation gate** | Set to `true` (requires `LOB_LIVE_API_KEY`) to enable real mail/charges for the 6 billable `*_create` tools AND to permit state-changing mutations against the live account. Without it, billable commits stay on the test key (no real mail, no charges) and **mutations are refused entirely** — a live key present in the environment can never change live-account state while this is off. |
+| `LOB_READS_USE_TEST` | `false` | **Read mode** (opt-out) | When `LOB_LIVE_API_KEY` is configured, **read operations (lists, gets, searches, verifications) automatically query the live account** so analytics return real data. Set this to `true` to force reads back onto the test key (uncommon — useful in dev environments where the live key is mounted but you want test responses). |
 
 **Typical configurations:**
 
 | Setup | Test key | Live key | `LOB_LIVE_MODE` | Result |
 |---|---|---|---|---|
-| Test-only | ✅ | — | — | Reads + commits both on test. |
-| Cautious analytics (recommended) | ✅ | ✅ | unset | **Reads on live, commits on test** — real analytics, safe commits. |
-| Full live | ✅ | ✅ | `true` | Reads + commits both on live. |
+| Test-only | ✅ | — | — | Reads + commits on test; mutations refused. |
+| Cautious analytics (recommended) | ✅ | ✅ | unset | **Reads on live, commits on test, mutations refused** — real analytics, safe writes. |
+| Full live | ✅ | ✅ | `true` | Reads + commits on live; mutations permitted (live key). |
 | Force test reads | ✅ | ✅ | any | + `LOB_READS_USE_TEST=true` → reads on test regardless. |
 
 The boot banner prints both modes on startup so you can verify how requests will route before invoking any tool.
+
+> **Test-mode limitation (by design).** Because mutations are *refused* (not routed to the test key) unless `LOB_LIVE_MODE=true`, any flow that depends on a **mutating setup step** cannot be exercised end-to-end in a test-only or cautious-analytics deployment. Specifically: **check sends** need a verified bank account (`lob_bank_accounts_create` / `_verify` are mutations), and **buckslip/card inventory orders** need the asset to exist first (`lob_buckslips_create` / `lob_cards_create` are mutations). The billable *order/send* itself still runs as a $0 test send, but its setup must be done in live mode (or out-of-band). Plain **letter / postcard / self-mailer** sends have no mutating prerequisite and work fully in test mode. This is the deliberate cost of fail-closing the live account; do not "fix" it by routing mutations to the test key (that reopens the hole this gate closes).
 
 ### Safety knobs
 

@@ -6,19 +6,26 @@
  *     the fallback for everything when no live key is configured.
  *   • LOB_LIVE_API_KEY (optional) — used for live-account work.
  *
- * Two effective modes route operations to the correct key:
+ * Two effective modes route operations to the correct key (the client in
+ * `src/lob/client.ts` classifies each request and applies them):
  *   • effectiveCommitMode — gates BILLABLE COMMITS (the 6 mail-piece / inventory
- *     `*_create` tools). Goes "live" only when both LOB_LIVE_API_KEY AND
- *     LOB_LIVE_MODE=true are set. Default test.
- *   • effectiveReadMode — gates everything else (lists, gets, searches, cancels,
- *     deletes, non-billable creates/updates, verifications). Goes "live"
- *     whenever LOB_LIVE_API_KEY is configured — analytics questions like
+ *     `*_create` tools) AND all state-changing MUTATIONS (deletes, cancels,
+ *     updates, non-billable creates). Goes "live" only when both LOB_LIVE_API_KEY
+ *     AND LOB_LIVE_MODE=true are set. Default test. Mutations additionally
+ *     FAIL CLOSED: they are refused before any network call when this is "test",
+ *     so a live key present in the environment can never change live-account
+ *     state while LOB_LIVE_MODE is off.
+ *   • effectiveReadMode — gates read-only operations (lists, gets, searches, and
+ *     pure lookups: address verification / autocompletion / identity). Goes
+ *     "live" whenever LOB_LIVE_API_KEY is configured — analytics questions like
  *     "how many letters last week?" are about real account data, and reads
- *     have no billing risk. Set LOB_READS_USE_TEST=true to force reads back
- *     onto the test key (uncommon — useful in dev environments where the live
- *     key is mounted but you want test responses).
+ *     have no state-change or physical-mail risk (address verifications are
+ *     metered lookups, not mail). Set LOB_READS_USE_TEST=true to force
+ *     reads back onto the test key (uncommon — useful in dev environments where
+ *     the live key is mounted but you want test responses).
  *
- * Previews always run against the test key regardless of either mode.
+ * Previews (the /resource_proofs endpoints) always run against the test key
+ * regardless of either mode.
  */
 
 export interface LobEnv {
@@ -28,9 +35,9 @@ export interface LobEnv {
   baseUrl: string;
   /** True when LOB_LIVE_MODE=true AND a live key is configured. Drives commit gating. */
   liveModeEnabled: boolean;
-  /** Routes billable commit POSTs. "live" only when liveModeEnabled. */
+  /** Routes billable commit POSTs and gates state-changing mutations. "live" only when liveModeEnabled. */
   effectiveCommitMode: "test" | "live";
-  /** Routes everything that is NOT a billable commit. "live" whenever liveApiKey is set, unless LOB_READS_USE_TEST=true. */
+  /** Routes read-only operations (GETs + pure lookups). "live" whenever liveApiKey is set, unless LOB_READS_USE_TEST=true. */
   effectiveReadMode: "test" | "live";
   requireConfirmation: boolean;
   confirmationTtlSeconds: number;
