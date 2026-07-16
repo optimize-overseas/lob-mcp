@@ -1,5 +1,55 @@
 # Changelog
 
+## 1.4.0 — 2026-07-16 (Fail-closed live-mutation gate)
+
+A `live_` key present in the environment with `LOB_LIVE_MODE` unset (the
+cautious-default posture) could reach the LIVE account for **state-changing**
+operations. The 1.3.0 read/commit split routed everything that was not a
+billable create through `effectiveReadMode` — which goes live whenever a live
+key is configured — so deletes, cancels, updates, and non-billable creates hit
+the live account even though the server believed it was in test mode. Only the
+six billable mail-piece creates were gated by `LOB_LIVE_MODE`.
+
+### Added (fail-closed mutation gate)
+
+- **`classifyOperation(method, path)`** (now exported from `src/lob/client.ts`)
+  sorts every request into one of four operation kinds:
+  - `preview` — `/resource_proofs` (any method): always the test key, never
+    refused. This also fixes proof get/update, which previously leaked to the
+    live key.
+  - `commit` — the six billable mail-piece / inventory-order POSTs: gated by
+    `effectiveCommitMode` (test unless `LOB_LIVE_MODE=true`). Unchanged.
+  - `read` — GETs plus pure-lookup POSTs (address verification, autocompletion,
+    identity validation): `effectiveReadMode` (live whenever a live key is
+    configured). Unchanged.
+  - `mutation` — the DEFAULT arm: deletes, cancels, updates, and non-billable
+    creates. **Refused before any network call unless `LOB_LIVE_MODE=true`**
+    (new error code `LOB_LIVE_MODE_REQUIRED`), and routed to the live key when
+    live mode is on. Because `mutation` is the default, a newly added
+    state-changing tool is fail-closed automatically — it cannot fall through
+    to the read key.
+- An explicit `keyMode` still overrides which KEY is used, but **cannot bypass**
+  the mutation gate: the refusal runs before key selection.
+
+### Changed
+
+- The startup banner, MCP `instructions`, and the `env.ts` / `client.ts`
+  doc-comments, README, and CLAUDE.md were updated to describe the four
+  operation classes and the fail-closed gate.
+- The "reads have no billing risk" wording was corrected to "no state-change or
+  physical-mail risk" — address verifications are metered lookups but carry no
+  live-account or mail risk.
+
+### Behavior change (deliberate)
+
+- In a test-only or cautious-analytics deployment, a flow that depends on a
+  mutating SETUP step can no longer be exercised end-to-end. Check sends need a
+  verified bank account, and buckslip/card orders need the asset created first;
+  those create/verify calls are mutations and are now refused in test mode. The
+  billable order/send itself still runs as a $0 test send, so plain letter,
+  postcard, and self-mailer sends are unaffected. Do not "fix" this by routing
+  mutations to the test key — that reopens the hole this release closes.
+
 ## 1.3.0 — 2026-04-30 (Read/commit key split + count-idiom hints)
 
 Two unrelated UX bugs surfaced from the same chat-bot session:
