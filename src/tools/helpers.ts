@@ -1,7 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { ZodRawShape, infer as zInfer } from "zod";
-import { formatErrorForTool } from "../lob/errors.js";
+import {
+  classifyErrorDispatch,
+  formatErrorForTool,
+  LOB_DISPATCH_META_KEY,
+} from "../lob/errors.js";
 import { safeStringify } from "../lob/redact.js";
 
 export interface ToolAnnotations {
@@ -110,6 +114,9 @@ export function registerTool<TShape extends ZodRawShape>(
         return {
           isError: true,
           content: [{ type: "text", text: formatErrorForTool(err) }],
+          // Machine-readable "did this reach Lob?" for out-of-process spend
+          // limiters. Prose is not a contract; this is.
+          _meta: { [LOB_DISPATCH_META_KEY]: classifyErrorDispatch(err) },
         };
       }
     }) as never,

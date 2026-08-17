@@ -13,7 +13,16 @@ coverage/
 CLAUDE.local.md
 bestpractices/
 
-# Local test harness — contains live API keys, artifacts, and internal reports
-tests/
+# Local test harness — contains live API keys, artifacts, and internal reports.
+# Ignored wholesale by default, with a narrow allow-list below: a few tests are
+# not a local harness at all, they are the machine checks other packages rely
+# on. Those must survive a fresh clone. Nothing added here may touch a key, a
+# fixture, or the network — pure-logic assertions only.
+tests/*
+!tests/unit/
+tests/unit/*
+!tests/unit/billable.test.ts
+!tests/unit/env-flags.test.ts
+!tests/unit/dispatch.test.ts
 .env.test
 .env.test.*

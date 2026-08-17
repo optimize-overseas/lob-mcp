@@ -85,6 +85,41 @@ export class LobMcpError extends Error {
   }
 }
 
+/**
+ * Whether a failed call can be assumed NOT to have created anything at Lob.
+ *
+ *   not_sent      — proven: a guard fired before the network call, or Lob
+ *                   rejected the request outright (4xx). Nothing was billed.
+ *   indeterminate — a timeout or a 5xx: the piece may exist. Lob can accept and
+ *                   print a create whose response never reaches us.
+ *
+ * This exists because an out-of-process spend limiter has to decide whether a
+ * failed billable call gives its slot back. Guessing "error means nothing was
+ * mailed" is wrong in exactly the timeout case, which is also the case most
+ * likely to repeat under load - so the distinction is published rather than
+ * left to be inferred from prose.
+ */
+export type LobDispatchState = "not_sent" | "indeterminate";
+
+/** `_meta` key carrying `LobDispatchState` on an error tool result. */
+export const LOB_DISPATCH_META_KEY = "com.lob.mcp/dispatch";
+
+/**
+ * Classify a thrown error. Defaults to `indeterminate`: an error shape we do
+ * not recognise is not evidence that nothing was sent, and the safe assumption
+ * for a caller counting spend is that it was.
+ */
+export function classifyErrorDispatch(err: unknown): LobDispatchState {
+  // Our own guards all run before the request is dispatched.
+  if (err instanceof LobMcpError) return "not_sent";
+  // The response never arrived - Lob may still have accepted the create.
+  if (err instanceof LobTimeoutError) return "indeterminate";
+  if (err instanceof LobApiError) {
+    return err.status >= 400 && err.status < 500 ? "not_sent" : "indeterminate";
+  }
+  return "indeterminate";
+}
+
 export function formatErrorForTool(err: unknown): string {
   if (err instanceof LobTimeoutError) {
     return (

@@ -23,6 +23,16 @@ should have imported.
   hand-listed four of the six and was missing both inventory-order tools.
 - **`BILLABLE_POST_PATHS` is now exported** from `src/lob/client.ts` so the
   correspondence between paths and tools is machine-checkable.
+- **A dispatch verdict on every error result.** `classifyErrorDispatch()` and
+  `LOB_DISPATCH_META_KEY` (`src/lob/errors.ts`); `registerTool` attaches
+  `_meta["com.lob.mcp/dispatch"]` = `"not_sent"` | `"indeterminate"` to any
+  `isError` result. `not_sent` is a proof (one of our own pre-network guards,
+  or a 4xx from Lob); everything else - a timeout, a 5xx, an unrecognised error
+  - is `indeterminate`, because this server aborts its own request at
+  `LOB_REQUEST_TIMEOUT_MS` **including during the response-body read**, so a
+  create Lob has already accepted, billed and printed can surface here as an
+  error. A caller that treats every error as "nothing was sent" will undercount
+  spend exactly when Lob is slow. `tests/unit/dispatch.test.ts`.
 
 ### Changed
 
