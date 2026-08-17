@@ -67,8 +67,13 @@ export interface RequestOptions {
  * fail-closed in test mode (good) but in LIVE mode would route to the live key and
  * send real mail WITHOUT the idempotency-key assertion, piece cap, or preview→commit
  * gating — all of which hang off the `commit` class, not `mutation`.
+ *
+ * ⚠️ Add its TOOL to `src/safety/billable.ts` in the same change. That table is what
+ * out-of-process spend limits (the enforcement wrapper's 20/hr live-mail cap) count
+ * by, since they see tool names and never paths. `tests/unit/billable.test.ts` fails
+ * if the two lists drift apart in either direction.
  */
-const BILLABLE_POST_PATHS: RegExp[] = [
+export const BILLABLE_POST_PATHS: RegExp[] = [
   /^\/postcards\b/,
   /^\/letters\b/,
   /^\/self_mailers\b/,

@@ -28,6 +28,8 @@
  * regardless of either mode.
  */
 
+import { parseBool } from "./env-flags.js";
+
 export interface LobEnv {
   testApiKey: string;
   liveApiKey: string | null;
@@ -51,11 +53,6 @@ export interface LobEnv {
 const DEFAULT_BASE_URL = "https://api.lob.com/v1";
 const DEFAULT_TTL_SECONDS = 600;
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
-
-function parseBool(raw: string | undefined, fallback: boolean): boolean {
-  if (raw === undefined) return fallback;
-  return /^(1|true|yes|on)$/i.test(raw.trim());
-}
 
 function parsePositiveNumber(raw: string | undefined): number | null {
   if (!raw) return null;

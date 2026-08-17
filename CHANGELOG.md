@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.5.0 — 2026-08-17 (Exportable billable classification + shared flag parsing)
+
+No behaviour change to the server's own gates - this release exists so an
+out-of-process enforcement layer cannot disagree with them. Both additions come
+from a defect found in `lob-enforcement-wrapper`, which caps live mail at 20
+pieces/hour above this server and had independently re-implemented two things it
+should have imported.
+
+### Added
+
+- **`src/env-flags.ts`** — `parseBool` (moved out of `env.ts`, behaviour
+  unchanged) plus `isExplicitlyDisabled`, the vocabulary a fail-closed caller
+  needs. The wrapper had re-implemented the parse as `=== "true"`, so `1`,
+  `TRUE`, `yes`, `on` and `" true"` put this server fully live while the
+  wrapper's cap stayed disarmed. One exported predicate removes the class of
+  bug. `tests/unit/env-flags.test.ts` proves truthy ⟹ not-disabled across the
+  spelling matrix.
+- **`src/safety/billable.ts`** — `BILLABLE_TOOLS`, `BILLABLE_TOOL_NAMES` and
+  `isBillableToolName()`: the same set `BILLABLE_POST_PATHS` describes, keyed by
+  TOOL NAME so a layer that only sees the MCP wire can use it. The wrapper had
+  hand-listed four of the six and was missing both inventory-order tools.
+- **`BILLABLE_POST_PATHS` is now exported** from `src/lob/client.ts` so the
+  correspondence between paths and tools is machine-checkable.
+
+### Changed
+
+- **`buildPreviewCommit()` asserts its `baseName` is a known billable resource**
+  and throws at registration time otherwise. A new billable tool that skips
+  `BILLABLE_TOOLS` now fails at server boot instead of shipping invisible to
+  external spend limits. `tests/unit/billable.test.ts` checks the paths/tools
+  correspondence in both directions.
+
 ## 1.4.0 — 2026-07-16 (Fail-closed live-mutation gate)
 
 A `live_` key present in the environment with `LOB_LIVE_MODE` unset (the

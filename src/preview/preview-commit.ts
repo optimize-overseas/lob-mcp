@@ -22,6 +22,7 @@ import { randomUUID } from "node:crypto";
 import type { ZodRawShape, infer as zInfer } from "zod";
 import type { LobEnv } from "../env.js";
 import { LobMcpError, LobMcpErrorCodes } from "../lob/errors.js";
+import { assertRegisteredBillable } from "../safety/billable.js";
 import { hashPayload } from "./payload-hash.js";
 import type { PreviewRecord } from "./preview-record.js";
 import type { TokenStore } from "./token-store.js";
@@ -62,6 +63,11 @@ export function buildPreviewCommit<TShape extends ZodRawShape>(opts: {
   ctx: PreviewCommitContext;
 }): PreviewCommitTools<TShape> {
   const { baseName, ctx } = opts;
+
+  // Fail at registration (server boot), not at send time: the preview/commit
+  // flow is the billable flow, so a baseName missing from the billable table
+  // would be a tool that external spend limits cannot see.
+  assertRegisteredBillable(baseName);
 
   return {
     async preview(input) {
