@@ -1,26 +1,31 @@
 # Changelog
 
+## 1.5.1 — 2026-08-17 (Documentation wording)
+
+Doc-comment and changelog wording only. No functional change.
+
 ## 1.5.0 — 2026-08-17 (Exportable billable classification + shared flag parsing)
 
-No behaviour change to the server's own gates - this release exists so an
-out-of-process enforcement layer cannot disagree with them. Both additions come
-from a defect found in `lob-enforcement-wrapper`, which caps live mail at 20
-pieces/hour above this server and had independently re-implemented two things it
-should have imported.
+No behaviour change to the server's own gates - this release exists so a layer
+in front of this server cannot disagree with them. A proxy enforcing its own
+spend limit has to answer two questions this server had only answered privately:
+is live mode on, and which tools cost money. Anything that re-implements those
+answers will eventually disagree with this server, and the disagreement is
+silent.
 
 ### Added
 
 - **`src/env-flags.ts`** — `parseBool` (moved out of `env.ts`, behaviour
   unchanged) plus `isExplicitlyDisabled`, the vocabulary a fail-closed caller
-  needs. The wrapper had re-implemented the parse as `=== "true"`, so `1`,
-  `TRUE`, `yes`, `on` and `" true"` put this server fully live while the
-  wrapper's cap stayed disarmed. One exported predicate removes the class of
-  bug. `tests/unit/env-flags.test.ts` proves truthy ⟹ not-disabled across the
+  needs. A caller that re-implements the parse as `=== "true"` reads `1`,
+  `TRUE`, `yes`, `on` and `" true"` as OFF while this server goes fully live, so
+  its own guard never arms. One exported predicate removes the class of bug. `tests/unit/env-flags.test.ts` proves truthy ⟹ not-disabled across the
   spelling matrix.
 - **`src/safety/billable.ts`** — `BILLABLE_TOOLS`, `BILLABLE_TOOL_NAMES` and
   `isBillableToolName()`: the same set `BILLABLE_POST_PATHS` describes, keyed by
-  TOOL NAME so a layer that only sees the MCP wire can use it. The wrapper had
-  hand-listed four of the six and was missing both inventory-order tools.
+  TOOL NAME so a layer that only sees the MCP wire can use it. A hand-copied
+  list drifts: the inventory-order tools are billable without being mail, and
+  are the two most easily left out of one.
 - **`BILLABLE_POST_PATHS` is now exported** from `src/lob/client.ts` so the
   correspondence between paths and tools is machine-checkable.
 - **A dispatch verdict on every error result.** `classifyErrorDispatch()` and

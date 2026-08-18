@@ -67,7 +67,7 @@ test("SAFETY: an unrecognised error defaults to indeterminate", () => {
 });
 
 test("the _meta key is a published contract", () => {
-  // lob-enforcement-wrapper reads this exact string. Changing it silently
-  // downgrades that wrapper to "never release a slot" — safe, but wrong.
+  // Out-of-process callers match this exact string. Changing it silently
+  // downgrades them to "never release a slot" — safe, but wrong.
   assert.equal(LOB_DISPATCH_META_KEY, "com.lob.mcp/dispatch");
 });

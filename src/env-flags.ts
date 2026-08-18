@@ -1,15 +1,16 @@
 /**
  * Boolean environment-flag parsing, factored out of `env.ts` so that an
- * OUT-OF-PROCESS enforcement layer can import the exact same predicate.
+ * OUT-OF-PROCESS caller can import the exact same predicate.
  *
- * Why this is its own module: `lob-enforcement-wrapper` proxies this server and
- * arms a live-mail rate cap off `LOB_LIVE_MODE`. When it re-implemented the
- * parse as `=== "true"` the two layers disagreed for every non-canonical
- * spelling (`1`, `TRUE`, `yes`, `on`, `" true"`): this server went fully live
- * while the wrapper computed "not live" and never armed the cap. The defect was
- * duplication, so the fix is a single exported predicate plus the explicit
- * "off" vocabulary a fail-closed caller needs. Keep this module free of
- * dependencies and side effects - it is imported by other packages.
+ * Why this is its own module: a proxy or supervisor layered in front of this
+ * server often needs to read `LOB_LIVE_MODE` too - to decide whether to enforce
+ * a spend limit, for instance. If it re-implements the parse as `=== "true"`,
+ * the two layers disagree for every non-canonical spelling (`1`, `TRUE`, `yes`,
+ * `on`, `" true"`): this server goes fully live while the caller believes it is
+ * in test mode and stands its own guard down. The defect is duplication, so the
+ * fix is a single exported predicate plus the explicit "off" vocabulary a
+ * fail-closed caller needs. Keep this module free of dependencies and side
+ * effects - it is imported by other packages.
  */
 
 /** Spellings accepted as TRUE. */

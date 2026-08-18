@@ -69,9 +69,9 @@ export interface RequestOptions {
  * gating — all of which hang off the `commit` class, not `mutation`.
  *
  * ⚠️ Add its TOOL to `src/safety/billable.ts` in the same change. That table is what
- * out-of-process spend limits (the enforcement wrapper's 20/hr live-mail cap) count
- * by, since they see tool names and never paths. `tests/unit/billable.test.ts` fails
- * if the two lists drift apart in either direction.
+ * an out-of-process spend limit counts by, since a layer in front of this server sees
+ * tool names and never paths. `tests/unit/billable.test.ts` fails if the two lists
+ * drift apart in either direction.
  */
 export const BILLABLE_POST_PATHS: RegExp[] = [
   /^\/postcards\b/,

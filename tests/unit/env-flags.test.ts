@@ -1,11 +1,11 @@
 /**
  * The shared boolean-flag vocabulary.
  *
- * `lob-enforcement-wrapper` arms its live-mail cap off the SAME LOB_LIVE_MODE
- * value this server goes live on. When the two layers parsed it differently, a
- * spelling like `1` or `yes` produced real mail with the cap never armed. The
- * safety property proved below - "anything this server reads as live is also
- * NOT explicitly disabled" - is what lets the wrapper arm fail-closed.
+ * A spend limiter in front of this server arms off the SAME LOB_LIVE_MODE value
+ * this server goes live on. When two layers parse it differently, a spelling
+ * like `1` or `yes` produces real mail with the limiter never armed. The safety
+ * property proved below - "anything this server reads as live is also NOT
+ * explicitly disabled" - is what lets such a caller arm fail-closed.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";

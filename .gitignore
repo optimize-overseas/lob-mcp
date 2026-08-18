@@ -26,3 +26,6 @@ tests/unit/*
 !tests/unit/dispatch.test.ts
 .env.test
 .env.test.*
+
+# packed tarballs from `npm pack`
+*.tgz

@@ -3,11 +3,11 @@
  *
  * `lob/client.ts` already classifies billable work by HTTP path
  * (`BILLABLE_POST_PATHS`), which is the right granularity for key selection and
- * the idempotency assertion. But an out-of-process enforcement layer - notably
- * `lob-enforcement-wrapper`, which caps live mail at 20 pieces/hour - only ever
- * sees MCP TOOL NAMES on the wire. It cannot see paths, so it used to re-list
- * the billable tools by hand, and that list silently missed the two inventory
- * order tools. Exporting the mapping here means no other layer ever re-lists it.
+ * the idempotency assertion. But a spend limiter layered in front of this server
+ * only ever sees MCP TOOL NAMES on the wire. It cannot see paths, so without an
+ * export like this one it has to re-list the billable tools by hand - and a
+ * hand-copied list drifts silently, which is how the two inventory-order tools
+ * end up uncounted. Exporting the mapping means no other layer re-lists it.
  *
  * Two rails keep this honest, so a seventh billable resource cannot be added
  * without this file learning about it:

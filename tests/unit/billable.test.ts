@@ -1,12 +1,12 @@
 /**
  * Drift guards for the billable-tool table.
  *
- * The 20-pieces-per-hour live-mail cap lives OUT of process (in
- * lob-enforcement-wrapper) and can only match on tool names, so it derives its
- * counted set from BILLABLE_TOOL_NAMES. If that table ever describes a smaller
- * set than the client's own path classifier, a billable tool ships uncapped -
- * which is exactly how the two inventory order tools were missed. These tests
- * check the correspondence in BOTH directions.
+ * A spend limiter layered in front of this server can only match on tool names,
+ * so it derives its counted set from BILLABLE_TOOL_NAMES. If that table ever
+ * describes a smaller set than the client's own path classifier, a billable tool
+ * ships uncapped - the inventory-order tools are the easy ones to miss, since
+ * they are billable without being mail. These tests check the correspondence in
+ * BOTH directions.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -57,7 +57,7 @@ test("BILLABLE_TOOL_NAMES is the _create arm of every entry", () => {
       "lob_postcards_create",
       "lob_self_mailers_create",
     ],
-    "the known billable tool set changed - update the enforcement wrapper's expectations too",
+    "the known billable tool set changed - downstream spend limits must be updated too",
   );
   assert.ok(isBillableToolName("lob_letters_create"));
   assert.ok(!isBillableToolName("lob_letters_preview"));
