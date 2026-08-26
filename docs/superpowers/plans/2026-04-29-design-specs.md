@@ -16,7 +16,7 @@
 
 ## Critical analysis — design choices baked into this plan
 
-The user's actual problem: the AI generated a postcard back full of text, then got it auto-clipped by Lob's address block + barcode + indicia (visible in the test postcard PDF — the "If you're holding this card, the saf…" cutoff). The model had no idea the back has a 3.2835×2.375" ink-free zone in the lower-right corner. **The plan's success criterion is: a model that calls the new resource/tool before designing knows about that zone and respects it.**
+The problem this addresses: a generated postcard back was full of text and got auto-clipped by Lob's address block + barcode + indicia (visible in the test postcard PDF — the back-side body text is cut off mid-sentence). The model had no idea the back has a 3.2835×2.375" ink-free zone in the lower-right corner. **The plan's success criterion is: a model that calls the new resource/tool before designing knows about that zone and respects it.**
 
 ### Decision 1 — Resources, not tools, as the primary surface
 
@@ -1862,7 +1862,7 @@ EOF
 )"
 ```
 
-- [ ] **Step 3: Merge to main + push + tag (per CLAUDE.local.md workflow)**
+- [ ] **Step 3: Merge to main + push + tag**
 
 ```bash
 git checkout main

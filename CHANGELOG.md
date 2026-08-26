@@ -99,12 +99,12 @@ six billable mail-piece creates were gated by `LOB_LIVE_MODE`.
 
 ## 1.3.0 — 2026-04-30 (Read/commit key split + count-idiom hints)
 
-Two unrelated UX bugs surfaced from the same chat-bot session:
+Two unrelated UX bugs surfaced from the same real-world session:
 
 1. **Asking "how many letters last week?" stalled the bot.** The list-tool
    descriptions did not point the model at `include: ['total_count']`, so it
-   tried to paginate to count — on a 144 K-letter week that's ~1,440 pages,
-   minutes of wall time, and an exhausted context window.
+   tried to paginate to count — on a high-volume account that is hundreds or
+   thousands of pages, minutes of wall time, and an exhausted context window.
 2. **Even when the count came back, it was the wrong account.** Reads were
    gated by `LOB_LIVE_MODE` alongside billable commits, so the cautious-default
    config (live key set, `LOB_LIVE_MODE` unset) returned test-account noise
@@ -174,10 +174,10 @@ Two unrelated UX bugs surfaced from the same chat-bot session:
 ## 1.2.0 — 2026-04-30 (Templates payload + timeout release)
 
 A real-world MCP timeout was traced to `lob_templates_list` returning the full
-HTML body of every template. On a busy account (89 templates) this is ~75 MB
-per call, which blows past MCP tool-call budgets and LLM context windows. 1.2
-fixes the symptom (timeout) and the root cause (payload size), and adds the
-search tool the model needed in the first place.
+HTML body of every template. On a busy account this can run to tens of MB per
+call, which blows past MCP tool-call budgets and LLM context windows. 1.2 fixes
+the symptom (timeout) and the root cause (payload size), and adds the search
+tool the model needed in the first place.
 
 ### Added
 
@@ -196,12 +196,13 @@ search tool the model needed in the first place.
 
 - **`lob_templates_list` and `lob_template_versions_list` are slim by default.**
   They now strip `published_version.html` and drop the historical `versions[]`
-  array (replaced with `version_count`) before returning. On the verifying
-  account this took the default `limit=100` payload from **75 MB → 309 KB**
-  (245× shrink) while preserving everything the model needs to choose a
-  template — id, description, metadata, dates, `merge_variables.keys`. Pass
-  `include_html: true` to get the full HTML, or call `lob_templates_get(id)`
-  for the single full record. Tool count: **77 → 78**.
+  array (replaced with `version_count`) before returning. In verification
+  against an account with many large templates this shrank the default
+  `limit=100` payload by more than two orders of magnitude, while preserving
+  everything the model needs to choose a template — id, description, metadata,
+  dates, `merge_variables.keys`. Pass `include_html: true` to get the full
+  HTML, or call `lob_templates_get(id)` for the single full record. Tool count:
+  **77 → 78**.
 - **List-response size guard.** Every `_list` tool response is capped at 1.5 MB
   of JSON; oversized responses throw a clear error pointing at `limit`,
   `include_html`, or `lob_templates_search`. Belt-and-suspenders for
