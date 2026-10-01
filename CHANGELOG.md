@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.2 (Version reporting)
+
+The MCP `serverInfo.version` and the outbound `User-Agent` now read the
+package version from `package.json` when the server loads, so they can no
+longer drift from the version that was published. 1.5.0 and 1.5.1 reported
+1.4.0 in both places, because `src/version.ts` held a hand-maintained string.
+`tests/unit/version.test.ts` pins the two together. No other change.
+
 ## 1.5.1 — 2026-08-17 (Documentation wording)
 
 Doc-comment and changelog wording only. No functional change.
