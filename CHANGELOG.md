@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.5.4 (Proof-wait hardening)
+
+Follow-up to 1.5.3's proof wait, from a review of that release.
+
+- A `429` or `408` on a poll is retried like a timeout or a `5xx`; only other
+  `4xx` statuses end the wait at once. In 1.5.3 the rate limit the polling can
+  itself provoke ended the wait and returned no url.
+- A poll answer that is not an object carrying this proof's id is skipped, so
+  an empty or non-JSON `200` can no longer throw and lose the preview's token.
+- A proof that is already final without a url when created gets the same
+  `render_note` as one that settles that way while polling.
+- A wait under one second is reported in ms rather than as "0 s".
+- README: `lob_resource_proofs_create` is listed among the tools that wait, with
+  a note to keep the wait inside the client's tool-call timeout.
+
 ## 1.5.3 (Previews wait for the rendered proof)
 
 `lob_postcards_preview`, `lob_letters_preview` and `lob_self_mailers_preview`

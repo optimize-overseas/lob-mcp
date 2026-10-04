@@ -25,6 +25,7 @@ tests/unit/*
 !tests/unit/env-flags.test.ts
 !tests/unit/dispatch.test.ts
 !tests/unit/version.test.ts
+!tests/unit/await-proof.test.ts
 .env.test
 .env.test.*
 
