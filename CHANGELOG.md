@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.5.3 (Previews wait for the rendered proof)
+
+`lob_postcards_preview`, `lob_letters_preview` and `lob_self_mailers_preview`
+now return the RENDERED proof. Lob answers `POST /resource_proofs` at once
+with `status: "processing"`, `url: null` and no thumbnails, and renders the
+PDF a few seconds later; the previews used to return that first answer, so a
+client saw no proof URL, and calling the preview again only created another
+proof that had not rendered yet.
+
+### Changed
+
+- The three previews poll `GET /resource_proofs/{id}` (test key, never
+  billed) once a second until the status leaves `processing`, for up to
+  `LOB_PROOF_WAIT_MS` (new, default `30000`; `0` returns at once). A poll
+  that fails is retried rather than failing the preview, because the proof
+  already exists and the confirmation token is still worth issuing.
+- A proof still rendering at the limit comes back with `render_pending: true`
+  and a `render_note` naming `lob_resource_proofs_get` and the proof id. A 4xx
+  on a poll ends the wait at once (it will not change on retry), and a proof
+  that settles in a status other than `completed` without a url carries a
+  `render_note` saying so.
+- `lob_resource_proofs_create` waits the same way.
+
 ## 1.5.2 (Version reporting)
 
 The MCP `serverInfo.version` and the outbound `User-Agent` now read the

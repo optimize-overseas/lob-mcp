@@ -23,6 +23,7 @@ import {
   metadataSchema,
   withExtra,
 } from "../schemas/common.js";
+import { createRenderedProof } from "../preview/await-proof.js";
 import { findSpec } from "../specs/manifest.js";
 import { ToolAnnotationPresets, registerTool } from "./helpers.js";
 
@@ -384,6 +385,8 @@ export function registerUploadsTools(
       "Create a proof — a PDF preview of how a resource (postcard, letter, self-mailer) will print — " +
       "for review before committing to a mail send. Pass `resource_parameters` with the same shape you " +
       "would pass to the underlying create endpoint (e.g. `{ front, back, to }` for a postcard). " +
+      "Returns once Lob has rendered the proof (bounded by LOB_PROOF_WAIT_MS); one still rendering " +
+      "comes back with `render_pending: true`. " +
       "Note: the `lob_*_preview` tools call this endpoint internally; this raw tool is exposed for " +
       "advanced use cases.",
     inputSchema: {
@@ -404,12 +407,7 @@ export function registerUploadsTools(
     },
     handler: async (args) => {
       const { extra, ...rest } = args;
-      return lob.request({
-        method: "POST",
-        path: "/resource_proofs",
-        body: withExtra(rest, extra),
-        keyMode: "test",
-      });
+      return createRenderedProof(lob, withExtra(rest, extra) as Record<string, unknown>);
     },
   });
 

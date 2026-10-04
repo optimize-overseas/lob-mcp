@@ -48,11 +48,14 @@ export interface LobEnv {
   requireElicitationForBulkOverPieces: number | null;
   /** Per-request HTTP timeout for outbound Lob calls, in milliseconds. */
   requestTimeoutMs: number;
+  /** How long a `*_preview` waits for its proof to finish rendering, in milliseconds. 0 = return at once. */
+  proofWaitMs: number;
 }
 
 const DEFAULT_BASE_URL = "https://api.lob.com/v1";
 const DEFAULT_TTL_SECONDS = 600;
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+const DEFAULT_PROOF_WAIT_MS = 30_000;
 
 function parsePositiveNumber(raw: string | undefined): number | null {
   if (!raw) return null;
@@ -124,6 +127,20 @@ export function loadEnv(): LobEnv {
     requestTimeoutMs = Math.floor(parsed);
   }
 
+  const rawProofWait = process.env.LOB_PROOF_WAIT_MS;
+  let proofWaitMs: number;
+  if (rawProofWait === undefined || rawProofWait.trim() === "") {
+    proofWaitMs = DEFAULT_PROOF_WAIT_MS;
+  } else {
+    const parsed = Number(rawProofWait);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new Error(
+        `LOB_PROOF_WAIT_MS must be a non-negative integer (ms), got '${rawProofWait}'.`,
+      );
+    }
+    proofWaitMs = Math.floor(parsed);
+  }
+
   return {
     testApiKey,
     liveApiKey: liveApiKey || null,
@@ -143,5 +160,6 @@ export function loadEnv(): LobEnv {
       process.env.LOB_REQUIRE_ELICITATION_FOR_BULK_OVER_PIECES,
     ),
     requestTimeoutMs,
+    proofWaitMs,
   };
 }

@@ -159,7 +159,7 @@ scripts/
 ## Lob endpoint quirks worth remembering
 
 - **Creatives require `tmpl_…` IDs**, not URLs or HTML. Lob's `/v1/creatives` endpoint silently 500s on URL/HTML inputs.
-- **`/resource_proofs` requires PDF assets** for content fields, not inline HTML strings (postcards/letters/self-mailers via `*_create` accept HTML, but `/resource_proofs` does not). The `*_preview` tools route through `/resource_proofs`, so HTML inputs to a preview will fail at Lob with a 422.
+- **`/resource_proofs` renders asynchronously.** The POST answers at once with `status: "processing"`, `url: null` and no thumbnails; the PDF is ready a few seconds later. A preview that returned that first answer showed no proof, and calling the preview again only made another unrendered proof - so the postcard/letter/self-mailer previews poll the proof through `awaitRenderedProof()` (`src/preview/await-proof.ts`, bound `LOB_PROOF_WAIT_MS`) and mark one still rendering at the bound `render_pending`. Inline HTML content renders through `/resource_proofs` (re-checked 2026-10; an earlier note here said it returned 422).
 - **`/resource_proofs` enforces deliverability strictness** on both `to` and `from` addresses, just like `/postcards`. The "deliverable" magic value may not bypass strictness on every account — use a real, verifiable address for testing (e.g. Lob's HQ at `210 King St, San Francisco, CA 94107`).
 - **Lob has no proof endpoint for checks or inventory orders.** `lob_checks_preview`, `lob_buckslip_orders_preview`, and `lob_card_orders_preview` return textual summaries instead. Token-binding still applies.
 - **Buckslips require multipart/form-data.** Lob's spec claims JSON support but the endpoint always returns "front is required" on a JSON body.

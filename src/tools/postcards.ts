@@ -10,6 +10,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";
 import type { TokenStore } from "../preview/token-store.js";
+import { createRenderedProof } from "../preview/await-proof.js";
 import { buildPreviewCommit } from "../preview/preview-commit.js";
 import type { PieceCounter } from "../safety/piece-counter.js";
 import {
@@ -60,15 +61,10 @@ export function registerPostcardTools(
       env: lob.env,
       tokenStore,
       renderPreview: async (payload) => {
-        const proof = (await lob.request({
-          method: "POST",
-          path: "/resource_proofs",
-          body: {
-            resource_type: "postcard",
-            resource_parameters: stripCommitOnly(payload),
-          },
-          keyMode: "test",
-        })) as Record<string, unknown>;
+        const proof = await createRenderedProof(lob, {
+          resource_type: "postcard",
+          resource_parameters: stripCommitOnly(payload),
+        });
         const variant = (payload.size as string | undefined) ?? "4x6";
         return { ...proof, design_spec: findSpec("postcard", variant) };
       },
