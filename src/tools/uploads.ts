@@ -394,7 +394,7 @@ export function registerUploadsTools(
         .enum(["postcard", "letter", "self_mailer"])
         .describe("Type of resource being proofed."),
       resource_parameters: z
-        .record(z.unknown())
+        .record(z.string(), z.unknown())
         .describe(
           "Parameters matching the resource type's create shape — e.g. `{ front, back, to }` for a " +
             "postcard, `{ file, to }` for a letter. Each field accepts an HTML string, URL, or template ID.",

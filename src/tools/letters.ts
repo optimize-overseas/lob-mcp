@@ -20,6 +20,7 @@ import {
   idempotencyKeyAutoSchema,
   listParamsSchema,
   mailTypeSchema,
+  unionError,
   withExtra,
 } from "../schemas/common.js";
 import {
@@ -44,7 +45,9 @@ const letterCreateShape = {
   double_sided: doubleSidedSchema,
   address_placement: addressPlacementSchema,
   return_envelope: z
-    .union([z.boolean(), z.string()])
+    .union([z.boolean(), z.string()], {
+      error: unionError("true or false, or a return envelope ID string"),
+    })
     .optional()
     .describe(
       "Include a return envelope. Boolean true for default, or a return envelope ID.",

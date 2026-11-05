@@ -10,10 +10,12 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LobClient } from "../lob/client.js";
 import {
+  ADDRESS_REF_TAKES,
   compact,
   extraParamsSchema,
   listParamsSchema,
   metadataSchema,
+  unionError,
   withExtra,
 } from "../schemas/common.js";
 import { ToolAnnotationPresets, registerTool } from "./helpers.js";
@@ -153,7 +155,7 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
         .optional()
         .describe("Letter creative file: a Lob template ID. Required for letter creatives."),
       details: z
-        .record(z.unknown())
+        .record(z.string(), z.unknown())
         .default({})
         .describe(
           "Resource-specific options. Per Lob's spec, accepted keys for postcard creatives are " +
@@ -162,7 +164,9 @@ export function registerCampaignTools(server: McpServer, lob: LobClient): void {
         ),
       description: z.string().max(255).optional(),
       from: z
-        .union([z.string().regex(/^adr_/), z.record(z.unknown())])
+        .union([z.string().regex(/^adr_/), z.record(z.string(), z.unknown())], {
+          error: unionError(ADDRESS_REF_TAKES),
+        })
         .optional()
         .describe(
           "Sender address — saved address ID (`adr_…`) or inline. Required for letter creatives.",

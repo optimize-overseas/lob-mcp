@@ -26,6 +26,7 @@ tests/unit/*
 !tests/unit/dispatch.test.ts
 !tests/unit/version.test.ts
 !tests/unit/await-proof.test.ts
+!tests/unit/union-error.test.ts
 .env.test
 .env.test.*
 

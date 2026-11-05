@@ -63,7 +63,7 @@ export const mailPieceCommonShape = {
   mail_type: mailTypeSchema,
   merge_variables: mergeVariablesSchema,
   metadata: z
-    .record(z.string())
+    .record(z.string(), z.string())
     .optional()
     .describe("Up to 20 string key/value pairs to attach to the resource."),
   billing_group_id: billingGroupIdSchema,

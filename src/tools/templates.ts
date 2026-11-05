@@ -119,7 +119,7 @@ export function registerTemplateTools(server: McpServer, lob: LobClient): void {
             "Filtered client-side after pages are fetched.",
         ),
       metadata: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .optional()
         .describe(
           "Forwarded to Lob as a `metadata[k]=v` filter. Use this to narrow the page walk on " +

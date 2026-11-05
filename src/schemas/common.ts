@@ -11,6 +11,55 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 
 /**
+ * The refusal message for a tool-input union.
+ *
+ * zod 4 reports a union that refused its input as a bare "Invalid input", and
+ * the MCP SDK prints only that and its path. A model calling the tool through a
+ * client that does not show it the schema relies on that text to correct the
+ * call, so a union here says what the first option the input was the right type
+ * for refused, and where inside it; failing that, what the union takes and what
+ * it received. Only the message changes: what a union accepts, and its JSON
+ * schema, are untouched.
+ */
+type Refusal = { code?: string; message?: string; path?: PropertyKey[]; errors?: Refusal[][] };
+
+function nearestRefusals(options: Refusal[][], at: PropertyKey[] = []): Refusal[] {
+  for (const issues of options) {
+    const found = issues.flatMap((issue): Refusal[] => {
+      const path = [...at, ...(issue.path ?? [])];
+      const onTheInputItself = !issue.path?.length;
+      if (issue.code === "invalid_union") {
+        const inner = nearestRefusals(issue.errors ?? [], path);
+        return inner.length > 0 || onTheInputItself ? inner : [{ ...issue, path }];
+      }
+      const notThisOption =
+        onTheInputItself && (issue.code === "invalid_type" || issue.code === "invalid_value");
+      return notThisOption ? [] : [{ ...issue, path }];
+    });
+    if (found.length > 0) return found;
+  }
+  return [];
+}
+
+const pathText = (path: PropertyKey[]): string =>
+  path.map((p, i) => (typeof p === "number" ? `[${p}]` : `${i > 0 ? "." : ""}${String(p)}`)).join("");
+
+const receivedType = (value: unknown): string =>
+  value === null ? "null" : Array.isArray(value) ? "array" : typeof value;
+
+export const unionError =
+  (takes: string) =>
+  (issue: { errors: Refusal[][]; input?: unknown }): string => {
+    const found = nearestRefusals(issue.errors);
+    return found.length === 0
+      ? `Invalid input: expected ${takes}, received ${receivedType(issue.input)}`
+      : found.map((r) => `${r.path?.length ? `${pathText(r.path)}: ` : ""}${r.message}`).join("; ");
+  };
+
+/** What an address reference takes, in the words a refusal uses. */
+export const ADDRESS_REF_TAKES = "a saved address ID (adr_…) or an inline address object";
+
+/**
  * An inline US/international address payload accepted by Lob create endpoints.
  * Either provide a saved address `id` (`adr_…`) on the parent object, or this inline shape.
  */
@@ -39,10 +88,10 @@ export const inlineAddressSchema = z
 
 /** Either a Lob saved-address ID (`adr_…`) or an inline address object. */
 export const addressRefSchema = z
-  .union([
-    z.string().regex(/^adr_/).describe("Existing Lob address ID."),
-    inlineAddressSchema,
-  ])
+  .union(
+    [z.string().regex(/^adr_/).describe("Existing Lob address ID."), inlineAddressSchema],
+    { error: unionError(ADDRESS_REF_TAKES) },
+  )
   .describe("A Lob saved-address ID (`adr_…`) or an inline address object.");
 
 export const idempotencyKeySchema = z
@@ -76,7 +125,7 @@ export const generateIdempotencyKey = (): string => randomUUID();
 
 /** Lob date-range filter shape: { gt, gte, lt, lte } each an ISO 8601 timestamp. */
 export const dateFilterSchema = z
-  .record(z.string())
+  .record(z.string(), z.string())
   .describe(
     "ISO8601 date filter object with gt/gte/lt/lte keys, e.g. { gt: '2026-04-23T00:00:00Z' } " +
       "for 'last 7 days'. Combine with include:['total_count'] and limit:1 for date-bounded counts.",
@@ -103,7 +152,7 @@ export const listParamsSchema = z
       ),
     date_created: dateFilterSchema.optional(),
     metadata: z
-      .record(z.string())
+      .record(z.string(), z.string())
       .optional()
       .describe("Filter by metadata key/value pairs."),
   })
@@ -113,7 +162,7 @@ export type ListParams = z.infer<typeof listParamsSchema>;
 
 /** Generic escape hatch for Lob parameters not explicitly enumerated by a tool schema. */
 export const extraParamsSchema = z
-  .record(z.unknown())
+  .record(z.string(), z.unknown())
   .optional()
   .describe(
     "Additional Lob API parameters not enumerated above. Merged into the request body verbatim. " +
@@ -134,14 +183,14 @@ export const mailTypeSchema = z
   .describe("Mail class. Defaults to usps_first_class for most pieces.");
 
 export const mergeVariablesSchema = z
-  .record(z.unknown())
+  .record(z.string(), z.unknown())
   .optional()
   .describe(
     "Key/value pairs substituted into Handlebars-style {{variables}} in your HTML/template content.",
   );
 
 export const metadataSchema = z
-  .record(z.string())
+  .record(z.string(), z.string())
   .optional()
   .describe("Up to 20 string key/value pairs of arbitrary metadata to attach to the resource.");
 

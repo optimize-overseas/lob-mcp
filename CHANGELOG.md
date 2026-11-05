@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.5.5 (zod 4 and MCP SDK 1.32.2)
+
+Dependency update. zod 3 has no release patched for GHSA-mrhx-c7xc-m3w5, so
+zod is now `^4.6.7`, and the MCP SDK floor is `^1.32.2`.
+
+- Request bodies: for the same tool arguments, every request sent to Lob is
+  byte-for-byte what 1.5.4 sent, defaults and omitted fields included.
+- Two kinds of input that were accepted are now refused before anything is
+  sent: a number that is not finite (JSON `1e999`, which was sent as `null`),
+  and an integer outside +-(2^53 - 1), such as a `quantity` or a
+  `check_number` (JSON had already rounded it, so the number sent was not the
+  number given).
+- Tool surface: the same 78 tools with the same names, descriptions, required
+  fields, enums and string bounds. The input schemas inline repeated parts
+  instead of using `$ref`, drop the top-level `additionalProperties: false`
+  (unknown keys were and still are stripped), state `propertyNames` on record
+  fields, publish the email pattern that was already enforced, and give
+  integer fields the safe-integer range.
+- Refusals use zod 4's wording. A refused `to` or `from` address, a creative's
+  `from` and a letter's `return_envelope` say what to change (for example
+  `address_line1: Invalid input: expected string, received undefined`), where
+  zod 4 alone says only `Invalid input`. `tests/unit/union-error.test.ts` pins
+  that wording.
+
 ## 1.5.4 (Proof-wait hardening)
 
 Follow-up to 1.5.3's proof wait, from a review of that release.
